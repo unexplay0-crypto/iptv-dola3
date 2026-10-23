@@ -1,59 +1,39 @@
-# GlassVision IPTV — Liquid Glass Edition
+# UNEX PLAY
 
-Clone do **UNEX Vision IPTV** com o motor de reprodução e catálogo **100% preservados**, mas com toda a interface redesennada no estilo **Liquid Glass** (vidro líquido), inspirado na nova linguagem de design da Apple (iOS 26 / visionOS).
+Aplicativo de IPTV para **Android TV** (compatível com Android mobile) feito em **Flutter / Dart**.
 
-## O que mudou
+- Login por **DNS + Usuário + Senha** (API Xtream Codes / `player_api.php`) com fallback para lista **M3U** e código de ativação de 6 dígitos.
+- Abas: **Início** (recomendações, continuar assistindo, histórico, canais mais assistidos), **TV Ao Vivo** (categorias + canais + zapping), **Filmes** (por gênero), **Séries** (agrupadas por temporada/episódio), **Favoritos**, **Histórico**, **Configurações**.
+- **Controle parental** com PIN padrão `0000`.
+- **Teste de velocidade** embutido.
+- Player baseado em **ExoPlayer/Media3** (via `video_player`) com buffer trifásico, reconexão automática e User-Agent customizável.
+- Parser M3U em **Isolate** (stream linha a linha, máquina de estados) + cache em **SQLite** (sqflite) com bulk insert e paginação.
+- Navegação 100% por **controle remoto** (D-Pad) com gestão de foco (memória de foco, wrap-around, zero perda de foco).
 
-| Camada | Original (UNEX Vision) | GlassVision |
-|---|---|---|
-| Motor / Engine | Xtream Codes API + M3U, player multi-engine | **Idêntico** (core.dart preservado) |
-| Reprodução | ExoPlayer com fallback de decoder + redirects | **Idêntico** (patch no workflow) |
-| Catálogo | Live TV, Filmes (VOD), Séries, EPG, Favoritos, Recentes, Continue Watching | **Idêntico** |
-| Controle parental | PIN padrão 0000 | **Idêntico** |
-| Compatibilidade | Android TV (Leanback) + Celular | **Idêntico** |
-| **Visual** | Tema escuro plano ciano/roxo, cards opacos | **Liquid Glass**: blur de fundo, superfícies translúcidas, bordas especulares, fundo Aurora animado, brilho no foco, física de mola |
+## Compilar via GitHub Actions
+
+O workflow em `.github/workflows/build.yml` compila o APK automaticamente a cada push na `main` e em tags de release.
+
+1. Faça push deste repositório para o GitHub.
+2. Acesse a aba **Actions** → o build iniciará.
+3. Ao concluir, baixe o APK em **Artifacts** (ou no GitHub Releases se usar tag).
+
+### Assinatura de release (opcional)
+Para APKs release assinados, configure no GitHub Secrets:
+- `KEYSTORE_BASE64` (conteúdo base64 do seu .jks)
+- `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
+
+## Compilar localmente
+```bash
+flutter pub get
+flutter build apk --release
+# APK em: build/app/outputs/flutter-apk/app-release.apk
+```
 
 ## Estrutura
-
-```
-lib/
-├── core.dart            # Motor: modelos, XtreamCatalogService, SharedStreamEngine, AppStorage (preservado)
-├── glass.dart           # NOVO: sistema de design Liquid Glass (GlassSurface, GlassButton, GlassTextField, AuroraBackground, GlassDialog, GlassChip, GradientText, tema)
-├── widgets.dart         # Widgets reutilizáveis (reescritos em vidro: TVFocusableItem, cartazes, teclado virtual, PIN parental)
-├── main.dart            # App, boot, login (Xtream/M3U), dashboard (tema vidro + fundo Aurora)
-├── mobile_screen.dart   # Dashboard modo celular (estilo vidro)
-├── tv_screen.dart       # Dashboard modo Android TV com foco D-pad (estilo vidro)
-└── player_screen.dart   # Player adaptativo com OSD (estilo vidro)
-.github/workflows/build.yml  # Pipeline de build no GitHub Actions (gera APK release)
-pubspec.yaml
-PLANO_DE_DESENVOLVIMENTO.md  # Análise detalhada + plano de desenvolvimento
-```
-
-## Como compilar (upload para o GitHub)
-
-1. Crie um repositório no GitHub (ex.: `glassvision-iptv`).
-2. Faça upload de **todo o conteúdo** desta pasta (mantendo a estrutura `lib/` e `.github/`).
-3. Faça push para a branch `main`.
-4. Acesse a aba **Actions** — o workflow `Build GlassVision IPTV Release APK` inicia automaticamente.
-5. Ao terminar, baixe o APK em **Artifacts** (`glassvision-iptv-release-apk`).
-
-> O workflow gera automaticamente o `pubspec.yaml`, a pasta `android/`, o `MainActivity.kt` (ponte nativa), a política de rede HTTP, o patch do ExoPlayer para TV e compila o APK release. Nenhuma configuração adicional é necessária.
-
-## Compilar localmente (opcional)
-
-```bash
-flutter create --platforms=android --project-name glassvision --org com.glass.vision .
-flutter pub get
-flutter build apk --release --target-platform android-arm,android-arm64
-```
-
-## Login
-
-- **Modo Xtream**: DNS do servidor + Usuário + Senha
-- **Modo M3U direto**: link completo da lista M3U Plus
-
-PIN de controle parental padrão: **0000** (alterável em Configurações).
-
-## Créditos
-
-Motor de reprodução e catálogo baseado no projeto UNEX Vision IPTV. Visual Liquid Glass redesenhado do zero.
+- `lib/core/` — modelos, motor de player, armazenamento
+- `lib/data/` — cliente Xtream, parser M3U, speed test, TMDB, repositórios
+- `lib/db/` — banco SQLite (sqflite)
+- `lib/presentation/` — telas (login, início, tv, filmes, séries, player, configurações)
+- `lib/widgets/` — componentes reutilizáveis (foco TV, PIN, banners, skeleton)
+- `android/` — configuração nativa (Android TV / leanback)
