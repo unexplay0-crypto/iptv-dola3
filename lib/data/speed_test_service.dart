@@ -40,7 +40,7 @@ class SpeedTestService {
     final ping = pings.reduce((a, b) => a + b) / pings.length;
     final jitter = pings.length > 1
         ? pings.sublist(1).asMap().entries.map((e) => (e.value - pings[e.key]).abs()).reduce((a, b) => a + b) / (pings.length - 1)
-        : 0;
+        : 0.0;
 
     // Download: baixa um endpoint do servidor (ou fallback de arquivo conhecido)
     double totalBytes = 0;

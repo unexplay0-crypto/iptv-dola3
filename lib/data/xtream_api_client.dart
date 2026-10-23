@@ -118,7 +118,6 @@ class XtreamApiClient {
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode != 200) return {};
       final json = jsonDecode(resp.body);
-      final seasons = json["seasons"] as Map? ?? {};
       final episodes = json["episodes"] as List? ?? [];
       final out = <int, List<MediaItem>>{};
       for (final ep in episodes) {

@@ -59,7 +59,7 @@ class M3uParser {
       if (line.startsWith("http") || line.startsWith("rtmp") || line.startsWith("udp")) {
         final urlParts = line.split("|");
         final url = urlParts[0];
-        final pipeHeaders = urlParts.length > 1 ? _parsePipeHeaders(urlParts.sublist(1).join("|")) : {};
+        final pipeHeaders = urlParts.length > 1 ? _parsePipeHeaders(urlParts.sublist(1).join("|")) : <String, String>{};
         final allHeaders = {...headers, ...pipeHeaders};
         final type = _classify(url, group, name ?? "");
         final seriesInfo = _extractSeries(name ?? "");
