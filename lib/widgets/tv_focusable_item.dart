@@ -67,7 +67,7 @@ class _TVFocusableItemState extends State<TVFocusableItem> {
         onLongPress: widget.onLongPress,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          transform: Matrix4.identity()..scaleByDouble(_focused ? 1.06 : 1.0),
+          transform: Matrix4.diagonal3Values(_focused ? 1.06 : 1.0, _focused ? 1.06 : 1.0, 1.0),
           transformAlignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),

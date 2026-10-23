@@ -145,7 +145,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, __) async {
         if (didPop) return;
-        if (await _onWillPop() && mounted) Navigator.of(context).pop();
+        final shouldPop = await _onWillPop();
+        if (!mounted) return;
+        if (shouldPop) Navigator.of(context).pop();
       },
       child: Scaffold(
         backgroundColor: Colors.black,
