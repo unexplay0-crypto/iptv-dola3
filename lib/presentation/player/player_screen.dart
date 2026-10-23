@@ -26,7 +26,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _osdVisible = true;
   Timer? _osdTimer;
   Timer? _progressTimer;
-  bool _adultChecked = false;
 
   bool get _isLive => widget.item.type == ContentType.live;
   bool get _isVod => !_isLive;
@@ -47,7 +46,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
       await AppStorage.instance.setAdultUnlocked(true);
     }
-    _adultChecked = true;
     await _openStream();
   }
 
@@ -107,7 +105,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final c = _ctrl;
     if (c == null || _isLive) return;
     final pos = c.value.position + delta;
-    c.seekTo(pos.clamp(Duration.zero, c.value.duration));
+    final target = pos < Duration.zero
+        ? Duration.zero
+        : (pos > c.value.duration ? c.value.duration : pos);
+    c.seekTo(target);
     _showOsd();
   }
 
@@ -140,8 +141,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, __) async {
+        if (didPop) return;
+        if (await _onWillPop() && mounted) Navigator.of(context).pop();
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Focus(
