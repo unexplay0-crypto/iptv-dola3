@@ -33,7 +33,7 @@ class AppTheme {
         labelLarge: TextStyle(color: textPrimary),
       ),
       focusColor: accent,
-      highlightColor: accent.withOpacity(0.2),
+      highlightColor: accent.withValues(alpha: 0.2),
     );
   }
 }
