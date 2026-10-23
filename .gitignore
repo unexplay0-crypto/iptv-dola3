@@ -50,3 +50,4 @@ ios/.symlinks/
 # Obfuscation
 app.*.symbols
 app.*.map.json
+job_logs.txt
