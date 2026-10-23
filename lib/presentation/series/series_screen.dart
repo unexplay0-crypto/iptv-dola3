@@ -9,8 +9,9 @@ import '../../widgets/tv_focusable_item.dart';
 import '../../widgets/skeleton.dart';
 import '../player/player_screen.dart';
 
-/// Séries — pôsteres GRANDES (4 colunas). Catálogo carregado uma vez em
-/// memória; busca filtra em memória (sem recarregar, sem spinner).
+/// Séries — pôsteres GRANDES (4 colunas) + sidebar de categorias/gêneros.
+/// Catálogo carregado uma vez em memória; troca de categoria e busca filtram
+/// em memória (sem recarregar, sem spinner).
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
 
@@ -23,6 +24,8 @@ class _SeriesScreenState extends State<SeriesScreen>
   final _repo = ContentRepository();
   final TextEditingController _searchCtrl = TextEditingController();
 
+  List<String> _groups = [];
+  String? _selectedGroup;
   List<SeriesGroup> _allSeries = []; // cache em memória
   bool _loading = true;
   String _search = "";
@@ -37,16 +40,22 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 
   Future<void> _load() async {
-    _allSeries = await _repo.series();
+    final groupsFuture = _repo.seriesGroups();
+    final seriesFuture = _repo.series();
+    final results = await Future.wait([groupsFuture, seriesFuture]);
+    _groups = results[0] as List<String>;
+    _allSeries = results[1] as List<SeriesGroup>;
+    if (_groups.isNotEmpty) _selectedGroup = _groups.first;
     if (mounted) setState(() => _loading = false);
   }
 
   List<SeriesGroup> get _filtered {
     final q = _search.trim().toLowerCase();
-    if (q.isEmpty) return _allSeries;
-    return _allSeries
-        .where((s) => s.name.toLowerCase().contains(q))
-        .toList();
+    return _allSeries.where((s) {
+      if (_selectedGroup != null && s.group != _selectedGroup) return false;
+      if (q.isNotEmpty && !s.name.toLowerCase().contains(q)) return false;
+      return true;
+    }).toList();
   }
 
   @override
@@ -121,81 +130,148 @@ class _SeriesScreenState extends State<SeriesScreen>
           ),
         ),
         Expanded(
-          child: series.isEmpty
-              ? const Center(
-                  child: Text("Nenhuma série encontrada.",
-                      style: TextStyle(color: AppTheme.textSecondary)))
-              : GridView.builder(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    childAspectRatio: 0.62,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
+          child: Row(
+            children: [
+              // Sidebar de categorias (glass) — apenas se houver grupos
+              if (_groups.isNotEmpty)
+                Container(
+                  width: 220,
+                  margin: const EdgeInsets.only(right: 14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                    border: Border.all(color: AppTheme.glassBorder),
                   ),
-                  itemCount: series.length,
-                  itemBuilder: (_, i) {
-                    final s = series[i];
-                    return TVFocusableItem(
-                      autofocus: i == 0,
-                      borderRadius: AppTheme.radiusPoster,
-                      onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  SeriesDetailScreen(series: s))),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.radiusPoster),
-                          boxShadow: AppTheme.cardShadow,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    itemCount: _groups.length,
+                    itemBuilder: (_, i) {
+                      final g = _groups[i];
+                      final sel = g == _selectedGroup;
+                      return TVFocusableItem(
+                        autofocus: i == 0,
+                        borderRadius: AppTheme.radiusSm,
+                        onTap: () => setState(() => _selectedGroup = g),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 13, horizontal: 14),
+                          decoration: BoxDecoration(
+                            gradient: sel ? AppTheme.accentGradient : null,
+                            color: sel ? null : Colors.transparent,
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusSm),
+                            boxShadow: sel
+                                ? [
+                                    BoxShadow(
+                                      color: AppTheme.accent
+                                          .withValues(alpha: 0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: Text(
+                            g,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: sel ? Colors.black : AppTheme.textPrimary,
+                              fontWeight: sel ? FontWeight.w900 : FontWeight.w600,
+                              fontSize: 14,
+                              height: 1.2,
+                            ),
+                          ),
                         ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            s.logo != null && s.logo!.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: s.logo!,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => const Center(
-                                        child: Icon(Icons.tv_rounded,
-                                            size: 48,
-                                            color: AppTheme.textMuted)),
-                                  )
-                                : const Center(
-                                    child: Icon(Icons.tv_rounded,
-                                        size: 48, color: AppTheme.textMuted)),
-                            const DecoratedBox(
-                                decoration:
-                                    BoxDecoration(gradient: AppTheme.cardGradient)),
-                            Positioned(
-                              left: 10,
-                              right: 10,
-                              bottom: 10,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                      );
+                    },
+                  ),
+                ),
+              // Grade de pôsteres GRANDES (4 colunas, proporção 2:3)
+              Expanded(
+                child: series.isEmpty
+                    ? const Center(
+                        child: Text("Nenhuma série encontrada.",
+                            style: TextStyle(color: AppTheme.textSecondary)))
+                    : GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          childAspectRatio: 0.62,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: series.length,
+                        itemBuilder: (_, i) {
+                          final s = series[i];
+                          return TVFocusableItem(
+                            autofocus: i == 0,
+                            borderRadius: AppTheme.radiusPoster,
+                            onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        SeriesDetailScreen(series: s))),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.surface,
+                                borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusPoster),
+                                boxShadow: AppTheme.cardShadow,
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Stack(
+                                fit: StackFit.expand,
                                 children: [
-                                  Text(
-                                    s.name,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTheme.posterTitle,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "${s.seasonNumbers.length} temp. • ${s.episodeCount} ep.",
-                                    style: AppTheme.posterMeta,
+                                  s.logo != null && s.logo!.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: s.logo!,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, __, ___) => const Center(
+                                              child: Icon(Icons.tv_rounded,
+                                                  size: 48,
+                                                  color: AppTheme.textMuted)),
+                                        )
+                                      : const Center(
+                                          child: Icon(Icons.tv_rounded,
+                                              size: 48,
+                                              color: AppTheme.textMuted)),
+                                  const DecoratedBox(
+                                      decoration: BoxDecoration(
+                                          gradient: AppTheme.cardGradient)),
+                                  Positioned(
+                                    left: 10,
+                                    right: 10,
+                                    bottom: 10,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          s.name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTheme.posterTitle,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "${s.seasonNumbers.length} temp. • ${s.episodeCount} ep.",
+                                          style: AppTheme.posterMeta,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -324,8 +400,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 22, vertical: 12),
                           decoration: BoxDecoration(
-                            gradient:
-                                sel ? AppTheme.accentGradient : null,
+                            gradient: sel ? AppTheme.accentGradient : null,
                             color: sel ? null : AppTheme.surface,
                             borderRadius: BorderRadius.circular(22),
                             border: Border.all(

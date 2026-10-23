@@ -30,7 +30,6 @@ class MediaItem {
   final String? tvgId;
   final bool catchup;
   final int? durationSec;
-
   // Agrupamento de séries
   final String? seriesKey; // nome normalizado da série
   final int? season;
@@ -118,12 +117,14 @@ class SeriesGroup {
   final String key;
   final String name;
   final String? logo;
+  final String group; // categoria/gênero da série
   final Map<int, List<MediaItem>> seasons; // season -> episodes sorted
 
   const SeriesGroup({
     required this.key,
     required this.name,
     this.logo,
+    this.group = "",
     required this.seasons,
   });
 
@@ -148,5 +149,7 @@ class AppCredentials {
   });
 
   bool get isEmpty =>
-      dns.isEmpty && (m3uUrl == null || m3uUrl!.isEmpty) && (activationCode == null || activationCode!.isEmpty);
+      dns.isEmpty &&
+      (m3uUrl == null || m3uUrl!.isEmpty) &&
+      (activationCode == null || activationCode!.isEmpty);
 }

@@ -71,13 +71,14 @@ class AppDatabase {
   }
 
   Future<List<String>> groupsForType(ContentType type) async {
+    // Categorias adultas sempre no final da lista.
     final rows = await (await db).query(
       "media",
       distinct: true,
       columns: ["grp"],
       where: "type = ? AND grp IS NOT NULL AND grp != ''",
       whereArgs: [type.name],
-      orderBy: "grp ASC",
+      orderBy: "CASE WHEN LOWER(grp) LIKE '%adult%' OR LOWER(grp) LIKE '%adulto%' OR LOWER(grp) LIKE '%xxx%' OR LOWER(grp) LIKE '%porn%' THEN 1 ELSE 0 END, grp ASC",
     );
     return rows.map((r) => r["grp"].toString()).toList();
   }
@@ -152,7 +153,7 @@ class AppDatabase {
     for (final row in rows) {
       final item = MediaItem.fromMap(row);
       final key = item.seriesKey!;
-      byKey.putIfAbsent(key, () => {"name": _seriesName(item.name), "key": key});
+      byKey.putIfAbsent(key, () => {"name": _seriesName(item.name), "key": key, "group": item.group});
       seasons.putIfAbsent(key, () => {});
       final s = item.season ?? 1;
       seasons[key]!.putIfAbsent(s, () => []).add(item);
@@ -173,6 +174,7 @@ class AppDatabase {
         key: key,
         name: info["name"].toString(),
         logo: logo,
+        group: info["group"]?.toString() ?? "",
         seasons: seasons[key] ?? {},
       ));
     });

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/models.dart';
+import '../core/storage.dart';
 
 /// Cliente da API Xtream Codes (player_api.php). Prioritário sobre M3U.
 /// Busca primeiro os nomes das categorias (get_*_categories) para nunca
@@ -35,6 +36,13 @@ class XtreamApiClient {
       if (userInfo is Map) {
         final auth = userInfo["auth"]?.toString();
         final status = userInfo["status"]?.toString().toLowerCase();
+        // Captura data de vencimento (exp_date = timestamp Unix em segundos)
+        final expSec = int.tryParse(userInfo["exp_date"]?.toString() ?? "");
+        if (expSec != null && expSec > 0) {
+          await AppStorage.instance.setExpiryDateMillis(expSec * 1000);
+        } else {
+          await AppStorage.instance.setExpiryDateMillis(null);
+        }
         if (auth == "0") return false;
         if (status != null && {"disabled", "banned", "expired", "inactive"}.contains(status)) {
           return false;

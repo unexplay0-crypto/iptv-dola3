@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../core/storage.dart';
 import '../../db/database.dart';
-import '../../data/speed_test_service.dart';
 import '../../widgets/tv_focusable_item.dart';
 import '../../widgets/pin_dialog.dart';
 import '../login/login_screen.dart';
@@ -15,26 +14,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _speed = "";
-  bool _testing = false;
   bool _uiSound = AppStorage.instance.uiSoundEnabled;
   bool _adultUnlocked = AppStorage.instance.adultUnlocked;
-
-  Future<void> _testSpeed() async {
-    setState(() {
-      _testing = true;
-      _speed = "Medindo...";
-    });
-    try {
-      final dns = AppStorage.instance.credentials.dns;
-      final r = await SpeedTestService.run(dns.isNotEmpty ? dns : "https://speed.cloudflare.com");
-      setState(() => _speed = "${r.downloadMbps.toStringAsFixed(1)} Mbps • Ping ${r.pingMs.toStringAsFixed(0)}ms (${r.classification})");
-    } catch (e) {
-      setState(() => _speed = "Erro: $e");
-    } finally {
-      setState(() => _testing = false);
-    }
-  }
 
   Future<void> _changePin() async {
     final oldOk = await PinDialog.request(context, title: "PIN atual");
@@ -42,7 +23,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final newPin = await _askNewPin();
     if (newPin != null) {
       await AppStorage.instance.setPin(newPin);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("PIN alterado com sucesso")));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("PIN alterado com sucesso")));
     }
   }
 
@@ -53,34 +36,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: const Text("Novo PIN (4 dígitos)"),
-        content: TextField(controller: ctrl, keyboardType: TextInputType.number, maxLength: 4, obscureText: true, decoration: const InputDecoration(hintText: "0000")),
+        content: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+            obscureText: true,
+            decoration: const InputDecoration(hintText: "0000")),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          TextButton(onPressed: () {
-            final pin = ctrl.text.trim();
-            if (pin.length != 4 || int.tryParse(pin) == null) {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("O PIN deve ter exatamente 4 dígitos numéricos.")));
-              return;
-            }
-            Navigator.pop(context, pin);
-          }, child: const Text("Salvar")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar")),
+          TextButton(
+              onPressed: () {
+                final pin = ctrl.text.trim();
+                if (pin.length != 4 || int.tryParse(pin) == null) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          "O PIN deve ter exatamente 4 dígitos numéricos.")));
+                  return;
+                }
+                Navigator.pop(context, pin);
+              },
+              child: const Text("Salvar")),
         ],
       ),
     );
   }
 
   void _logout() async {
-    await AppDatabase.instance.clearAll(); // apaga catálogo do usuário anterior
+    await AppDatabase.instance.clearAll();
     await AppStorage.instance.clearCredentials();
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+    Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
   }
 
   @override
   Widget build(BuildContext context) {
     return ListView(children: [
-      _item("Testar Velocidade", _testing ? "Medindo..." : (_speed.isEmpty ? "Medir conexão com o servidor" : _speed), Icons.speed, _testing ? null : _testSpeed),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(4, 0, 4, 14),
+        child: Text("Configurações", style: AppTheme.titleH1),
+      ),
+      const SizedBox(height: 8),
       _switch("Som de UI", _uiSound, (v) async {
         await AppStorage.instance.setUiSoundEnabled(v);
         setState(() => _uiSound = v);
@@ -93,31 +92,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await AppStorage.instance.setAdultUnlocked(v);
         setState(() => _adultUnlocked = v);
       }),
-      _item("Alterar PIN parental", "PIN atual: ${'•' * AppStorage.instance.pin.length}", Icons.lock, _changePin),
-      _item("Sair / Trocar conta", "Limpa credenciais e volta ao login", Icons.logout, _logout),
+      _item("Alterar PIN parental",
+          "PIN atual: ${'•' * AppStorage.instance.pin.length}", Icons.lock,
+          _changePin),
+      _item("Sair / Trocar conta", "Limpa credenciais e volta ao login",
+          Icons.logout, _logout),
       const SizedBox(height: 20),
-      const Center(child: Text("UNEX PLAY v1.0.0", style: TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
+      const Center(
+          child: Text("UNEX PLAY v1.1.0",
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
     ]);
   }
 
-  Widget _item(String title, String subtitle, IconData icon, VoidCallback? onTap) {
-    return TVFocusableItem(
-      onTap: onTap,
-      child: ListTile(
-        leading: Icon(icon, color: AppTheme.accent),
-        title: Text(title),
-        subtitle: Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+  Widget _item(String title, String subtitle, IconData icon,
+      VoidCallback? onTap) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: TVFocusableItem(
+        borderRadius: AppTheme.radiusMd,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.surface.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: Border.all(color: AppTheme.glassBorder),
+          ),
+          child: ListTile(
+            leading: Icon(icon, color: AppTheme.accent),
+            title:
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(subtitle,
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right,
+                color: AppTheme.textSecondary),
+          ),
+        ),
       ),
     );
   }
 
   Widget _switch(String title, bool value, ValueChanged<bool> onChanged) {
-    return SwitchListTile(
-      title: Text(title),
-      value: value,
-      activeThumbColor: AppTheme.accent,
-      onChanged: onChanged,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surface.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(color: AppTheme.glassBorder),
+        ),
+        child: SwitchListTile(
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          value: value,
+          activeThumbColor: AppTheme.accent,
+          activeTrackColor: AppTheme.accent.withValues(alpha: 0.4),
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }

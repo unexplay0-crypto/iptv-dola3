@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../app_theme.dart';
 import '../../core/storage.dart';
 import '../../core/models.dart';
 import '../../data/repositories/content_repository.dart';
-import '../../data/speed_test_service.dart';
 import '../main_shell.dart';
 import '../../widgets/tv_focusable_item.dart';
 
+/// Tela de login simplificada e limpa.
+/// Logo + nome no topo, 3 campos (DNS, usuário, senha), botão Conectar
+/// e um botão discreto "Usar lista M3U" que expande o campo de link M3U.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,12 +21,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _m3uCtrl = TextEditingController();
-  bool _advanced = false;
+  bool _showM3u = false;
   bool _loading = false;
   String _status = "";
   String _error = "";
-  bool _testingSpeed = false;
-  String _speedResult = "";
 
   Future<void> _login() async {
     setState(() {
@@ -38,137 +37,167 @@ class _LoginScreenState extends State<LoginScreen> {
         dns: _dnsCtrl.text.trim(),
         username: _userCtrl.text.trim(),
         password: _passCtrl.text.trim(),
-        m3uUrl: _advanced ? _m3uCtrl.text.trim() : null,
+        m3uUrl: _showM3u ? _m3uCtrl.text.trim() : null,
       );
       if (creds.dns.isEmpty && (creds.m3uUrl?.isEmpty ?? true)) {
         throw Exception("Informe o DNS ou um link M3U.");
       }
       await AppStorage.instance.saveCredentials(creds);
       final repo = ContentRepository();
-      await repo.loadCatalog(onStatus: (s) => setState(() => _status = s));
+      await repo.loadCatalog(onStatus: (s) {
+        if (mounted) setState(() => _status = s);
+      });
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell()));
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell()));
     } catch (e) {
-      setState(() {
-        _error = e.toString().replaceAll("Exception: ", "");
-        _loading = false;
-      });
-    }
-  }
-
-  Future<void> _runSpeedTest() async {
-    setState(() {
-      _testingSpeed = true;
-      _speedResult = "Medindo...";
-    });
-    try {
-      final dns = _dnsCtrl.text.trim().isNotEmpty
-          ? _dnsCtrl.text.trim()
-          : "https://speed.cloudflare.com";
-      final result = await SpeedTestService.run(dns);
-      setState(() {
-        _speedResult =
-            "Ping: ${result.pingMs.toStringAsFixed(0)}ms • Jitter: ${result.jitterMs.toStringAsFixed(0)}ms • ${result.downloadMbps.toStringAsFixed(1)} Mbps (${result.classification})";
-      });
-    } catch (e) {
-      setState(() => _speedResult = "Erro no teste: $e");
-    } finally {
-      setState(() => _testingSpeed = false);
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceAll("Exception: ", "");
+          _loading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.overscan),
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppTheme.ambientGradient),
+        child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.play_circle_fill, size: 64, color: AppTheme.accent),
-                    const SizedBox(height: 8),
-                    const Text("UNEX PLAY", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    const Text("Entre com seu DNS, usuário e senha", style: TextStyle(color: AppTheme.textSecondary)),
-                    const SizedBox(height: 24),
-                    _field("DNS (ex: http://servidor.com:8080)", _dnsCtrl, TextInputType.url),
-                    const SizedBox(height: 12),
-                    _field("Usuário", _userCtrl, TextInputType.text),
-                    const SizedBox(height: 12),
-                    _field("Senha", _passCtrl, TextInputType.visiblePassword, obscure: true),
-                    const SizedBox(height: 16),
-                    if (_advanced) ...[
-                      _field("Link M3U (opcional / fallback)", _m3uCtrl, TextInputType.url),
-                      const SizedBox(height: 16),
-                    ],
-                    if (_loading) ...[
-                      const CircularProgressIndicator(color: AppTheme.accent),
-                      const SizedBox(height: 8),
-                      Text(_status, style: const TextStyle(color: AppTheme.textSecondary)),
-                    ] else ...[
-                      TVFocusableItem(
-                        autofocus: true,
-                        onTap: _login,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          color: AppTheme.accent,
-                          alignment: Alignment.center,
-                          child: const Text("ENTRAR", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Logo + nome (topo central)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.accentGradient,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.accent.withValues(alpha: 0.4),
+                              blurRadius: 24,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
+                        child: const Icon(Icons.play_arrow_rounded,
+                            color: Colors.black, size: 44),
                       ),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        Expanded(
-                          child: TVFocusableItem(
-                            onTap: _testingSpeed ? null : _runSpeedTest,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              color: AppTheme.surface,
-                              alignment: Alignment.center,
-                              child: Text(_testingSpeed ? "Testando..." : "Testar Velocidade", style: const TextStyle(fontSize: 14)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TVFocusableItem(
-                            onTap: () => setState(() => _advanced = !_advanced),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              color: AppTheme.surface,
-                              alignment: Alignment.center,
-                              child: Text(_advanced ? "Modo Simples" : "Link M3U / Código", style: const TextStyle(fontSize: 14)),
-                            ),
-                          ),
-                        ),
-                      ]),
-                      if (_speedResult.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Text(_speedResult, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.accent, fontSize: 13)),
-                      ],
-                      // QR Code para login pelo celular (pareamento)
                       const SizedBox(height: 16),
-                      QrImageView(
-                        data: "unexplay://pair?dns=${Uri.encodeComponent(_dnsCtrl.text)}",
-                        version: QrVersions.auto,
-                        size: 120,
-                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.white),
-                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.white),
+                      const Text(
+                        "UNEX PLAY",
+                        style: TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 3,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 6),
-                      const Text("Escaneie com o celular para entrar mais rápido", style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      const Text(
+                        "Conecte-se com sua lista",
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 14),
+                      ),
+                      const SizedBox(height: 32),
+                      // Campos
+                      _field("DNS (ex: http://servidor.com:8080)", _dnsCtrl,
+                          TextInputType.url),
+                      const SizedBox(height: 14),
+                      _field("Usuário", _userCtrl, TextInputType.text),
+                      const SizedBox(height: 14),
+                      _field("Senha", _passCtrl, TextInputType.visiblePassword,
+                          obscure: true),
+                      const SizedBox(height: 14),
+                      // Campo M3U (expansível)
+                      if (_showM3u) ...[
+                        _field("Link M3U", _m3uCtrl, TextInputType.url),
+                        const SizedBox(height: 14),
+                      ],
+                      if (_loading) ...[
+                        const SizedBox(height: 16),
+                        const CircularProgressIndicator(color: AppTheme.accent),
+                        const SizedBox(height: 12),
+                        Text(_status,
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 13)),
+                      ] else ...[
+                        // Botão Conectar
+                        TVFocusableItem(
+                          autofocus: true,
+                          borderRadius: AppTheme.radiusMd,
+                          onTap: _login,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.accentGradient,
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.radiusMd),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      AppTheme.accent.withValues(alpha: 0.35),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              "CONECTAR",
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                  letterSpacing: 1.5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        // Botão discreto: usar lista M3U
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _showM3u = !_showM3u),
+                          child: Text(
+                            _showM3u
+                                ? "Voltar ao modo DNS"
+                                : "Usar lista M3U",
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 13,
+                                decoration: TextDecoration.underline),
+                          ),
+                        ),
+                      ],
+                      if (_error.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger.withValues(alpha: 0.12),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusMd),
+                            border: Border.all(
+                                color: AppTheme.danger.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(_error,
+                              style: const TextStyle(
+                                  color: AppTheme.danger, fontSize: 13),
+                              textAlign: TextAlign.center),
+                        ),
+                      ],
                     ],
-                    if (_error.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(_error, style: const TextStyle(color: AppTheme.danger), textAlign: TextAlign.center),
-                    ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -178,19 +207,30 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, TextInputType type, {bool obscure = false}) {
+  Widget _field(String label, TextEditingController ctrl, TextInputType type,
+      {bool obscure = false}) {
     return TextField(
       controller: ctrl,
       keyboardType: type,
       obscureText: obscure,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppTheme.textSecondary),
         filled: true,
-        fillColor: AppTheme.surface,
-        focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: AppTheme.accent, width: 2), borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[800]!), borderRadius: BorderRadius.circular(8)),
+        fillColor: AppTheme.surface.withValues(alpha: 0.8),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            borderSide: const BorderSide(color: AppTheme.accent, width: 1.5)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            borderSide:
+                BorderSide(color: Colors.white.withValues(alpha: 0.08))),
       ),
     );
   }

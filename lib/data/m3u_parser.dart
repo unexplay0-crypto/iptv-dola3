@@ -146,15 +146,46 @@ class M3uParser {
   }
 
   static (String, int, int)? _extractSeries(String name) {
-    final m = RegExp(r"^(.*?)\s*[Ss](\d+)\s*[Ee](\d+)").firstMatch(name);
-    if (m != null) {
-      return (m.group(1)!.trim().toLowerCase(), int.parse(m.group(2)!), int.parse(m.group(3)!));
+    // Padrões comuns: S01E01, S1E1, T1E1, T01E01, S01 E01, Season 1 Episode 1,
+    // 1ª Temporada Episódio 1, Temporada 1 Episódio 1, EP01 (temporada 1).
+    final patterns = [
+      RegExp(r"^(.*?)\s*[Ss](\d{1,2})\s*[Ee](\d{1,3})"),
+      RegExp(r"^(.*?)\s*[Tt](\d{1,2})\s*[Ee](\d{1,3})"),
+      RegExp(r"^(.*?)\s*Season\s+(\d{1,2})\s+Episode\s+(\d{1,3})", caseSensitive: false),
+      RegExp(r"^(.*?)\s*Temporada\s+(\d{1,2})\s+Epis[oó]dio\s+(\d{1,3})", caseSensitive: false),
+      RegExp(r"^(.*?)\s*(\d{1,2})[ªa]\s*Temp\w*\s+Ep\w*\s+(\d{1,3})", caseSensitive: false),
+    ];
+    for (final reg in patterns) {
+      final m = reg.firstMatch(name);
+      if (m != null) {
+        final seriesName = _normalizeSeriesName(m.group(1)!);
+        if (seriesName.isNotEmpty) {
+          return (seriesName, int.parse(m.group(2)!), int.parse(m.group(3)!));
+        }
+      }
     }
-    final m2 = RegExp(r"^(.*?)\s*[Tt](\d+)\s*[Ee](\d+)").firstMatch(name);
-    if (m2 != null) {
-      return (m2.group(1)!.trim().toLowerCase(), int.parse(m2.group(2)!), int.parse(m2.group(3)!));
+    // Apenas episódio (EP01 / Ep. 1) → assume temporada 1.
+    final epOnly = RegExp(r"^(.*?)\s*(?:Ep\.?|Epis[oó]dio)\s*(\d{1,3})", caseSensitive: false).firstMatch(name);
+    if (epOnly != null) {
+      final seriesName = _normalizeSeriesName(epOnly.group(1)!);
+      if (seriesName.isNotEmpty) {
+        return (seriesName, 1, int.parse(epOnly.group(2)!));
+      }
     }
     return null;
+  }
+
+  /// Normaliza o nome da série para agrupamento: minúsculas, remove ano,
+  /// qualidade (4K/FHD/HD), resoluções e pontuação excessiva.
+  static String _normalizeSeriesName(String raw) {
+    var s = raw.trim().toLowerCase();
+    // Remove ano entre parênteses ou colchetes: (2019), [2019]
+    s = s.replaceAll(RegExp(r"[\[\(]\d{4}[\]\)]"), "");
+    // Remove tags de qualidade/resolução
+    s = s.replaceAll(RegExp(r"\b(4k|2160p|fhd|1080p|hd|720p|sd|480p|dual.?audio|dublado|legendado)\b"), "");
+    // Remove pontuação sobrando e espaços múltiplos
+    s = s.replaceAll(RegExp(r"[^\w\s]"), " ").replaceAll(RegExp(r"\s+"), " ").trim();
+    return s;
   }
 
   static bool _isAdult(String group, String name) {

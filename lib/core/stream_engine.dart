@@ -5,15 +5,18 @@ import 'models.dart';
 
 /// Motor de reprodução singleton (SharedStreamEngine).
 /// Expõe [controllerNotifier] para que a UI reconstrua o VideoPlayer quando
-/// a reconexão automática troca o controller (antes a UI ficava com o
-/// controller antigo descartado → tela preta).
+/// a reconexão automática troca o controller. Também expõe [statusNotifier]
+/// para feedback de carregamento em tempo real (evita a impressão de
+/// "carregamento infinito" — o usuário vê em qual tentativa está).
 class SharedStreamEngine {
   static final SharedStreamEngine instance = SharedStreamEngine._();
   SharedStreamEngine._();
 
-  /// Notifica a UI sempre que o controller ativo muda (reconexão).
   final ValueNotifier<VideoPlayerController?> controllerNotifier =
       ValueNotifier(null);
+
+  /// Status textual do carregamento atual ("Conectando...", "Tentativa 2/3...").
+  final ValueNotifier<String> statusNotifier = ValueNotifier("Conectando...");
 
   VideoPlayerController? get controller => controllerNotifier.value;
   MediaItem? currentItem;
@@ -38,17 +41,32 @@ class SharedStreamEngine {
     await disposeCurrent();
     currentItem = item;
     final cleanUrl = normalizeUrl(item.url);
+    if (cleanUrl.isEmpty) {
+      statusNotifier.value = "URL inválida";
+      throw Exception("URL do stream está vazia ou inválida.");
+    }
     final baseHeaders = Map<String, String>.from(item.headers);
 
+    // VOD: menos tentativas e timeout mais curto (falha rápido se a URL for
+    // inválida, em vez de parecer "carregamento infinito").
+    final isLive = item.type == ContentType.live;
+    final maxAttempts = isLive ? 4 : 3;
+    final timeout = isLive
+        ? const Duration(seconds: 8)
+        : const Duration(seconds: 10);
+
     final attempts = <Map<String, String>>[];
-    for (final ua in _userAgents) {
-      attempts.add({...baseHeaders, "User-Agent": ua});
+    for (var i = 0; i < maxAttempts && i < _userAgents.length; i++) {
+      attempts.add({...baseHeaders, "User-Agent": _userAgents[i]});
     }
     attempts.add({...baseHeaders});
     attempts.add({});
 
     Object? lastError;
+    var attempt = 0;
     for (final h in attempts) {
+      attempt++;
+      statusNotifier.value = "Conectando... (tentativa $attempt/${attempts.length})";
       VideoPlayerController? c;
       try {
         c = VideoPlayerController.networkUrl(
@@ -56,11 +74,9 @@ class SharedStreamEngine {
           httpHeaders: h,
           videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
         );
-        final timeout = item.type == ContentType.live
-            ? const Duration(seconds: 8)
-            : const Duration(seconds: 15);
         await c.initialize().timeout(timeout);
         controllerNotifier.value = c;
+        statusNotifier.value = "Conectado";
         _autoReconnectLive(c, item, cleanUrl, h);
         return c;
       } catch (e) {
@@ -70,6 +86,7 @@ class SharedStreamEngine {
         } catch (_) {}
       }
     }
+    statusNotifier.value = "Falha na conexão";
     throw lastError ?? Exception("Não foi possível abrir o stream");
   }
 
@@ -91,7 +108,7 @@ class SharedStreamEngine {
             try {
               await c.dispose();
             } catch (_) {}
-            controllerNotifier.value = nc; // UI rebuilda automaticamente
+            controllerNotifier.value = nc;
             await nc.play();
             _reconnecting = false;
             return;

@@ -46,6 +46,7 @@ class ContentRepository {
 
   Future<List<String>> liveGroups() => _db.groupsForType(ContentType.live);
   Future<List<String>> movieGroups() => _db.groupsForType(ContentType.movie);
+  Future<List<String>> seriesGroups() => _db.groupsForType(ContentType.episode);
 
   Future<List<MediaItem>> liveChannels({String? group, int limit = 50, int offset = 0, String? search}) =>
       _db.itemsByType(ContentType.live, group: group, limit: limit, offset: offset, search: search, includeAdult: _storage.adultUnlocked);

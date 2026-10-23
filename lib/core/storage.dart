@@ -21,6 +21,7 @@ class AppStorage {
   static const _kSubtitlePref = "subtitle_pref";
   static const _kUiSound = "ui_sound";
   static const _kLastChannel = "last_channel";
+  static const _kExpiryDate = "expiry_date";
   static const defaultPin = "0000";
 
   late SharedPreferences _prefs;
@@ -143,4 +144,24 @@ class AppStorage {
   // Último canal (recall)
   String? get lastChannel => _prefs.getString(_kLastChannel);
   Future<void> setLastChannel(String id) async => _prefs.setString(_kLastChannel, id);
+
+  // Data de vencimento da lista (Xtream exp_date, em millis desde epoch).
+  // null = desconhecida (ex: lista M3U sem essa informação).
+  int? get expiryDateMillis => _prefs.getInt(_kExpiryDate);
+  Future<void> setExpiryDateMillis(int? millis) async {
+    if (millis == null) {
+      await _prefs.remove(_kExpiryDate);
+    } else {
+      await _prefs.setInt(_kExpiryDate, millis);
+    }
+  }
+
+  /// Dias restantes até o vencimento (pode ser negativo se já venceu).
+  /// null se a data de vencimento for desconhecida.
+  int? get daysUntilExpiry {
+    final millis = expiryDateMillis;
+    if (millis == null) return null;
+    final diff = millis - DateTime.now().millisecondsSinceEpoch;
+    return (diff / Duration.millisecondsPerDay).ceil();
+  }
 }

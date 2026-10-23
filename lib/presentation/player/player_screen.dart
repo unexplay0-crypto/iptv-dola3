@@ -23,6 +23,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   VideoPlayerController? _ctrl;
   bool _loading = true;
   String _error = "";
+  String _status = "Conectando...";
   bool _osdVisible = true;
   Timer? _osdTimer;
   Timer? _progressTimer;
@@ -34,7 +35,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _engine.controllerNotifier.addListener(_onEngineController);
+    _engine.statusNotifier.addListener(_onStatus);
     _init();
+  }
+
+  void _onStatus() {
+    if (mounted) setState(() => _status = _engine.statusNotifier.value);
   }
 
   /// Reconectou: o engine trocou o controller — atualiza a UI para não ficar
@@ -148,6 +154,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _engine.controllerNotifier.removeListener(_onEngineController);
+    _engine.statusNotifier.removeListener(_onStatus);
     _osdTimer?.cancel();
     _progressTimer?.cancel();
     if (_isVod && _ctrl != null && _ctrl!.value.isInitialized) {
@@ -200,7 +207,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ? AspectRatio(aspectRatio: _ctrl!.value.aspectRatio, child: VideoPlayer(_ctrl!))
                     : Container(color: Colors.black),
               ),
-              if (_loading) const Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+              if (_loading)
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: AppTheme.accent),
+                      const SizedBox(height: 16),
+                      Text(_status,
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 14)),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Se demorar, pressione Voltar e tente novamente",
+                        style: TextStyle(
+                            color: AppTheme.textMuted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
               if (_error.isNotEmpty)
                 Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
