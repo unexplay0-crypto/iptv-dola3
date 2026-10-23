@@ -20,85 +20,185 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
 
   static const _tabs = [
-    ("Início", Icons.home),
-    ("TV Ao Vivo", Icons.live_tv),
-    ("Filmes", Icons.movie),
-    ("Séries", Icons.tv),
-    ("Favoritos", Icons.favorite),
-    ("Histórico", Icons.history),
-    ("Configurações", Icons.settings),
-  ];
-
-  final _pages = const [
-    HomeScreen(),
-    LiveTvScreen(),
-    MoviesScreen(),
-    SeriesScreen(),
-    FavoritesScreen(),
-    HistoryScreen(),
-    SettingsScreen(),
+    ("Início", Icons.home_outlined, Icons.home),
+    ("TV Ao Vivo", Icons.live_tv_outlined, Icons.live_tv),
+    ("Filmes", Icons.movie_outlined, Icons.movie),
+    ("Séries", Icons.tv_outlined, Icons.tv),
+    ("Favoritos", Icons.favorite_border, Icons.favorite),
+    ("Histórico", Icons.history_outlined, Icons.history),
+    ("Configurações", Icons.settings_outlined, Icons.settings),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.overscan / 2),
-          child: Row(
-            children: [
-              // Menu lateral (navegável por D-Pad)
-              Container(
-                width: 180,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
-                child: Column(
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(Icons.play_circle_fill, color: AppTheme.accent, size: 28),
-                        SizedBox(width: 6),
-                        Text("UNEX", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      ]),
-                    ),
-                    const Divider(height: 1, color: Colors.white12),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _tabs.length,
-                        itemBuilder: (_, i) {
-                          final (label, icon) = _tabs[i];
-                          final selected = i == _index;
-                          return TVFocusableItem(
-                            autofocus: i == 0,
-                            borderRadius: 8,
-                            onTap: () => setState(() => _index = i),
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.topRight,
+            radius: 1.2,
+            colors: [Color(0xFF12202E), AppTheme.background],
+            stops: [0.0, 0.6],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.overscan / 2),
+            child: Row(
+              children: [
+                // Menu lateral moderno
+                Container(
+                  width: 200,
+                  margin: const EdgeInsets.only(right: 14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                  ),
+                  child: Column(
+                    children: [
+                      // Logo
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: selected ? AppTheme.accent.withValues(alpha: 0.15) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: selected ? AppTheme.accent : Colors.transparent, width: 1),
+                                gradient: AppTheme.accentGradient,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.accent.withValues(alpha: 0.4),
+                                    blurRadius: 16,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
                               ),
-                              child: Row(children: [
-                                Icon(icon, color: selected ? AppTheme.accent : AppTheme.textSecondary, size: 20),
-                                const SizedBox(width: 10),
-                                Text(label, style: TextStyle(color: selected ? AppTheme.accent : AppTheme.textPrimary, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
-                              ]),
+                              child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 22),
                             ),
-                          );
-                        },
+                            const SizedBox(width: 10),
+                            const Text(
+                              "UNEX",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 20,
+                                letterSpacing: 2,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const Divider(height: 1, color: Colors.white10, indent: 16, endIndent: 16),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _tabs.length,
+                          itemBuilder: (_, i) {
+                            final (label, iconOff, iconOn) = _tabs[i];
+                            final selected = i == _index;
+                            return TVFocusableItem(
+                              autofocus: i == 0,
+                              borderRadius: AppTheme.radiusMd,
+                              onTap: () => setState(() => _index = i),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+                                decoration: BoxDecoration(
+                                  gradient: selected ? AppTheme.accentGradient : null,
+                                  color: selected ? null : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                                  border: Border.all(
+                                    color: selected ? Colors.transparent : Colors.transparent,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selected ? iconOn : iconOff,
+                                      color: selected ? Colors.black : AppTheme.textSecondary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      label,
+                                      style: TextStyle(
+                                        color: selected ? Colors.black : AppTheme.textPrimary,
+                                        fontWeight: selected ? FontWeight.w900 : FontWeight.w500,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceHighlight,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.verified_user_rounded, color: AppTheme.success, size: 16),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Conta ativa",
+                                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(child: _pages[_index]),
-            ],
+                // Conteúdo
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: KeyedSubtree(
+                      key: ValueKey(_index),
+                      child: _buildPage(_index),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildPage(int i) {
+    switch (i) {
+      case 0:
+        return const HomeScreen();
+      case 1:
+        return const LiveTvScreen();
+      case 2:
+        return const MoviesScreen();
+      case 3:
+        return const SeriesScreen();
+      case 4:
+        return const FavoritesScreen();
+      case 5:
+        return const HistoryScreen();
+      case 6:
+        return const SettingsScreen();
+      default:
+        return const HomeScreen();
+    }
   }
 }

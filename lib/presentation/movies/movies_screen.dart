@@ -17,8 +17,8 @@ class MoviesScreen extends StatefulWidget {
 
 class _MoviesScreenState extends State<MoviesScreen> {
   final _repo = ContentRepository();
-  List<String> _genres = [];
-  String? _selected;
+  List<String> _groups = [];
+  String? _selectedGroup;
   List<MediaItem> _movies = [];
   bool _loading = true;
   String _search = "";
@@ -30,104 +30,146 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Future<void> _load() async {
-    _genres = await _repo.movieGroups();
-    _selected = _genres.isNotEmpty ? _genres.first : null;
+    _groups = await _repo.movieGroups();
+    _selectedGroup = _groups.isNotEmpty ? _groups.first : null;
     await _loadMovies();
     if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _loadMovies() async {
-    _movies = await _repo.movies(group: _selected, limit: 1000, search: _search.isEmpty ? null : _search);
+    _movies = await _repo.movies(group: _selectedGroup, limit: 1000, search: _search.isEmpty ? null : _search);
     if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: SkeletonGrid());
-    return Column(children: [
-      // Barra de busca + gêneros
-      Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(children: [
-          Expanded(
-            child: TextField(
-              style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(
-                hintText: "Buscar filme...",
-                hintStyle: TextStyle(color: AppTheme.textSecondary),
-                prefixIcon: Icon(Icons.search, color: AppTheme.textSecondary),
-                filled: true,
-                fillColor: AppTheme.surface,
-                border: OutlineInputBorder(borderSide: BorderSide.none),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+          child: Row(
+            children: [
+              const Text("Filmes", style: AppTheme.titleH1),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                child: Text("${_movies.length} títulos", style: AppTheme.badge.copyWith(color: AppTheme.accent)),
               ),
-              onChanged: (v) async {
-                _search = v;
-                await _loadMovies();
-              },
-            ),
-          ),
-        ]),
-      ),
-      SizedBox(
-        height: 44,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: _genres.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (_, i) {
-            final g = _genres[i];
-            final sel = g == _selected;
-            return TVFocusableItem(
-              autofocus: i == 0,
-              onTap: () async {
-                _selected = g;
-                setState(() => _loading = true);
-                await _loadMovies();
-                setState(() => _loading = false);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: sel ? AppTheme.accent : AppTheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(g, style: TextStyle(color: sel ? Colors.black : AppTheme.textPrimary, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
-              ),
-            );
-          },
-        ),
-      ),
-      const SizedBox(height: 12),
-      Expanded(
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6, childAspectRatio: 0.6, crossAxisSpacing: 10, mainAxisSpacing: 10),
-          itemCount: _movies.length,
-          itemBuilder: (_, i) {
-            final m = _movies[i];
-            return TVFocusableItem(
-              onTap: () {
-                if (m.isAdult && !AppStorage.instance.adultUnlocked) {
-                  // abre player que pedirá PIN
-                }
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => PlayerScreen(item: m)));
-              },
-              child: Column(children: [
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    color: AppTheme.surface,
-                    child: m.logo != null
-                        ? CachedNetworkImage(imageUrl: m.logo!, fit: BoxFit.cover, errorWidget: (_, __, ___) => const Icon(Icons.movie, size: 40, color: Colors.grey))
-                        : const Icon(Icons.movie, size: 40, color: Colors.grey),
+              const Spacer(),
+              SizedBox(
+                width: 260,
+                height: 40,
+                child: TextField(
+                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: "Buscar filme...",
+                    hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted, size: 18),
+                    filled: true,
+                    fillColor: AppTheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMd), borderSide: const BorderSide(color: AppTheme.accent, width: 1.5)),
                   ),
+                  onChanged: (v) async {
+                    _search = v;
+                    await _loadMovies();
+                  },
                 ),
-                const SizedBox(height: 4),
-                Text(m.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
-              ]),
-            );
-          },
+              ),
+            ],
+          ),
         ),
-      ),
-    ]);
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                width: 200,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(color: AppTheme.surface.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _groups.length,
+                  itemBuilder: (_, i) {
+                    final g = _groups[i];
+                    final sel = g == _selectedGroup;
+                    return TVFocusableItem(
+                      autofocus: i == 0,
+                      borderRadius: AppTheme.radiusSm,
+                      onTap: () async {
+                        _selectedGroup = g;
+                        setState(() => _loading = true);
+                        await _loadMovies();
+                        setState(() => _loading = false);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: sel ? AppTheme.accent.withValues(alpha: 0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          border: Border.all(color: sel ? AppTheme.accent : Colors.transparent, width: sel ? 1.5 : 0),
+                        ),
+                        child: Text(g, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: sel ? AppTheme.accent : AppTheme.textPrimary, fontWeight: sel ? FontWeight.w800 : FontWeight.w500, fontSize: 13)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+                    : GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6, childAspectRatio: 0.58, crossAxisSpacing: 12, mainAxisSpacing: 12),
+                        itemCount: _movies.length,
+                        itemBuilder: (_, i) {
+                          final m = _movies[i];
+                          final fav = AppStorage.instance.isFavorite(m.id);
+                          return TVFocusableItem(
+                            borderRadius: AppTheme.radiusLg,
+                            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PlayerScreen(item: m))),
+                            onLongPress: () {
+                              AppStorage.instance.toggleFavorite(m.id);
+                              setState(() {});
+                            },
+                            child: Stack(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      m.logo != null && m.logo!.isNotEmpty
+                                          ? CachedNetworkImage(imageUrl: m.logo!, fit: BoxFit.cover, errorWidget: (_, __, ___) => const Center(child: Icon(Icons.movie_rounded, size: 40, color: AppTheme.textMuted)))
+                                          : const Center(child: Icon(Icons.movie_rounded, size: 40, color: AppTheme.textMuted)),
+                                      const DecoratedBox(decoration: BoxDecoration(gradient: AppTheme.cardGradient)),
+                                      Positioned(
+                                        left: 8, right: 8, bottom: 8,
+                                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Text(m.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                                          const SizedBox(height: 4),
+                                          AppTheme.qualityBadge(m.quality),
+                                        ]),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (fav) const Positioned(top: 6, right: 6, child: Icon(Icons.favorite, color: AppTheme.danger, size: 18)),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
