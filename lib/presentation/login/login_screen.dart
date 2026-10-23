@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../app_theme.dart';
 import '../../core/storage.dart';
@@ -159,7 +158,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         data: "unexplay://pair?dns=${Uri.encodeComponent(_dnsCtrl.text)}",
                         version: QrVersions.auto,
                         size: 120,
-                        foregroundColor: Colors.white,
+                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.white),
+                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.white),
                       ),
                       const SizedBox(height: 6),
                       const Text("Escaneie com o celular para entrar mais rápido", style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
