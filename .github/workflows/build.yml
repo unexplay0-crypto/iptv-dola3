@@ -1,5 +1,4 @@
 name: Build APK
-
 on:
   push:
     branches: [main]
@@ -7,35 +6,36 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-
+      - name: Ensure Android scaffold (gradle wrapper + missing files)
+        run: |
+          if [ ! -f android/gradlew ]; then
+            echo "gradlew nao encontrado - regenerando arquivos Android faltantes (sem sobrescrever existentes)"
+            flutter create --platforms=android --org com.unex --project-name unex_play --no-pub .
+          else
+            echo "gradlew presente - scaffold Android OK"
+          fi
       - name: Flutter pub get
         run: flutter pub get
-
       - name: Flutter analyze
         run: flutter analyze --no-fatal-infos
-
       - name: Flutter test
         run: flutter test
-
       - name: Decode keystore (release only)
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -46,7 +46,6 @@ jobs:
           keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=upload-keystore.jks
           EOF
-
       - name: Build APK (release signed if tag, else debug)
         run: |
           if [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
@@ -54,13 +53,11 @@ jobs:
           else
             flutter build apk --debug
           fi
-
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: unex-play-apk
           path: build/app/outputs/flutter-apk/*.apk
-
       - name: Release (tag only)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
