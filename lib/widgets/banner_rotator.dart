@@ -69,7 +69,7 @@ class _BannerRotatorState extends State<BannerRotator> {
                   CachedNetworkImage(imageUrl: item.logo!, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: AppTheme.surface))
                 else
                   Container(color: AppTheme.surface),
-                Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight, colors: [Colors.black87, Colors.black26, Colors.transparent]))),
+                Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight, colors: [Colors.black87, Colors.black26, Colors.transparent]))),
                 Positioned(left: 24, bottom: 20, right: 200, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(item.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 6),
