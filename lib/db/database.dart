@@ -48,7 +48,7 @@ class AppDatabase {
     final d = await db;
     await d.transaction((txn) async {
       await txn.delete("media");
-      final batch = txn.batch();
+      var batch = txn.batch();
       for (var i = 0; i < items.length; i++) {
         batch.insert("media", items[i].toMap(),
             conflictAlgorithm: ConflictAlgorithm.replace);
