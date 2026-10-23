@@ -5,10 +5,11 @@ import '../../core/models.dart';
 import '../../data/repositories/content_repository.dart';
 import '../main_shell.dart';
 import '../../widgets/tv_focusable_item.dart';
+import 'm3u_login_screen.dart';
 
-/// Tela de login simplificada e limpa.
-/// Logo + nome no topo, 3 campos (DNS, usuário, senha), botão Conectar
-/// e um botão discreto "Usar lista M3U" que expande o campo de link M3U.
+/// Tela de login simplificada e limpa (modo DNS/usuário/senha).
+/// Logo + nome no topo, 3 campos, botão CONECTAR, e abaixo um link discreto
+/// "Usar lista M3U" que navega para uma tela exclusiva de link M3U.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,8 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _dnsCtrl = TextEditingController();
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  final _m3uCtrl = TextEditingController();
-  bool _showM3u = false;
   bool _loading = false;
   String _status = "";
   String _error = "";
@@ -37,10 +36,9 @@ class _LoginScreenState extends State<LoginScreen> {
         dns: _dnsCtrl.text.trim(),
         username: _userCtrl.text.trim(),
         password: _passCtrl.text.trim(),
-        m3uUrl: _showM3u ? _m3uCtrl.text.trim() : null,
       );
-      if (creds.dns.isEmpty && (creds.m3uUrl?.isEmpty ?? true)) {
-        throw Exception("Informe o DNS ou um link M3U.");
+      if (creds.dns.isEmpty || creds.username.isEmpty || creds.password.isEmpty) {
+        throw Exception("Informe DNS, usuário e senha.");
       }
       await AppStorage.instance.saveCredentials(creds);
       final repo = ContentRepository();
@@ -117,14 +115,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 14),
                       _field("Senha", _passCtrl, TextInputType.visiblePassword,
                           obscure: true),
-                      const SizedBox(height: 14),
-                      // Campo M3U (expansível)
-                      if (_showM3u) ...[
-                        _field("Link M3U", _m3uCtrl, TextInputType.url),
-                        const SizedBox(height: 14),
-                      ],
+                      const SizedBox(height: 20),
                       if (_loading) ...[
-                        const SizedBox(height: 16),
                         const CircularProgressIndicator(color: AppTheme.accent),
                         const SizedBox(height: 12),
                         Text(_status,
@@ -164,15 +156,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        // Botão discreto: usar lista M3U
+                        // Link discreto: usar lista M3U (navega para tela exclusiva)
                         TextButton(
-                          onPressed: () =>
-                              setState(() => _showM3u = !_showM3u),
-                          child: Text(
-                            _showM3u
-                                ? "Voltar ao modo DNS"
-                                : "Usar lista M3U",
-                            style: const TextStyle(
+                          onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const M3ULoginScreen())),
+                          child: const Text(
+                            "Usar lista M3U",
+                            style: TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 13,
                                 decoration: TextDecoration.underline),

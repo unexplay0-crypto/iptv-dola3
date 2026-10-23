@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   final _repo = ContentRepository();
   final _tmdb = TmdbService();
-  List<MediaItem> _banners = [];
+  List<Map<String, dynamic>> _banners = []; // {"item": MediaItem, "tmdb": TmdbInfo?}
   List<MediaItem> _continueWatching = [];
   List<MediaItem> _history = [];
   List<MediaItem> _mostWatched = [];
@@ -39,10 +39,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _load() async {
     try {
-      final movies = await _repo.movies(limit: 50);
-      final series = await _repo.itemsByTypeSeriesHack();
-      final candidates = [...movies, ...series];
-      _banners = await _tmdb.getBanners(candidates);
+      final movies = await _repo.movies(limit: 80);
+      // Banners: filmes com logo, enriquecidos com backdrop do TMDB.
+      _banners = await _tmdb.getBanners(movies);
       final storage = AppStorage.instance;
       final progressIds =
           storage.vodProgress.keys.toList().take(10).toList();

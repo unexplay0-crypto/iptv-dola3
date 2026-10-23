@@ -44,7 +44,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     final groupsFuture = _repo.movieGroups();
     final moviesFuture = _repo.movies(limit: 100000);
     final results = await Future.wait([groupsFuture, moviesFuture]);
-    _groups = results[0] as List<String>;
+    _groups = ["Todos", ...(results[0] as List<String>)];
     _allMovies = results[1] as List<MediaItem>;
     if (_groups.isNotEmpty) _selectedGroup = _groups.first;
     if (mounted) setState(() => _loading = false);
@@ -53,7 +53,9 @@ class _MoviesScreenState extends State<MoviesScreen>
   List<MediaItem> get _filtered {
     final q = _search.trim().toLowerCase();
     return _allMovies.where((m) {
-      if (_selectedGroup != null && m.group != _selectedGroup) return false;
+      if (_selectedGroup != null &&
+          _selectedGroup != "Todos" &&
+          m.group != _selectedGroup) return false;
       if (q.isNotEmpty && !m.name.toLowerCase().contains(q)) return false;
       return true;
     }).toList();

@@ -45,7 +45,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
     final groupsFuture = _repo.liveGroups();
     final channelsFuture = _repo.liveChannels(limit: 100000);
     final results = await Future.wait([groupsFuture, channelsFuture]);
-    _groups = results[0] as List<String>;
+    _groups = ["Todos", ...(results[0] as List<String>)];
     _allChannels = results[1] as List<MediaItem>;
     if (_groups.isNotEmpty) _selectedGroup = _groups.first;
     if (mounted) setState(() => _loading = false);
@@ -55,7 +55,9 @@ class _LiveTvScreenState extends State<LiveTvScreen>
   List<MediaItem> get _filtered {
     final q = _search.trim().toLowerCase();
     return _allChannels.where((c) {
-      if (_selectedGroup != null && c.group != _selectedGroup) return false;
+      if (_selectedGroup != null &&
+          _selectedGroup != "Todos" &&
+          c.group != _selectedGroup) return false;
       if (q.isNotEmpty && !c.name.toLowerCase().contains(q)) return false;
       return true;
     }).toList();

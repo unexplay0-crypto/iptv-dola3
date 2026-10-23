@@ -43,7 +43,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     final groupsFuture = _repo.seriesGroups();
     final seriesFuture = _repo.series();
     final results = await Future.wait([groupsFuture, seriesFuture]);
-    _groups = results[0] as List<String>;
+    _groups = ["Todos", ...(results[0] as List<String>)];
     _allSeries = results[1] as List<SeriesGroup>;
     if (_groups.isNotEmpty) _selectedGroup = _groups.first;
     if (mounted) setState(() => _loading = false);
@@ -52,7 +52,9 @@ class _SeriesScreenState extends State<SeriesScreen>
   List<SeriesGroup> get _filtered {
     final q = _search.trim().toLowerCase();
     return _allSeries.where((s) {
-      if (_selectedGroup != null && s.group != _selectedGroup) return false;
+      if (_selectedGroup != null &&
+          _selectedGroup != "Todos" &&
+          s.group != _selectedGroup) return false;
       if (q.isNotEmpty && !s.name.toLowerCase().contains(q)) return false;
       return true;
     }).toList();

@@ -456,8 +456,25 @@ class _SpeedTestDialog extends StatefulWidget {
 }
 
 class _SpeedTestDialogState extends State<_SpeedTestDialog> {
-  String _result = "Medindo...";
   bool _testing = true;
+  double _download = 0;
+  double _ping = 0;
+  double _jitter = 0;
+  String _error = "";
+
+  Color get _qualityColor {
+    if (_download < 3) return AppTheme.danger;
+    if (_download < 8) return AppTheme.gold;
+    if (_download < 25) return AppTheme.success;
+    return AppTheme.accent;
+  }
+
+  String get _qualityLabel {
+    if (_download < 3) return "Ruim — recomendado SD";
+    if (_download < 8) return "Razoável — recomendado HD";
+    if (_download < 25) return "Boa — recomendado FHD";
+    return "Excelente — recomendado 4K";
+  }
 
   @override
   void initState() {
@@ -472,15 +489,16 @@ class _SpeedTestDialogState extends State<_SpeedTestDialog> {
           dns.isNotEmpty ? dns : "https://speed.cloudflare.com");
       if (mounted) {
         setState(() {
-          _result =
-              "${r.downloadMbps.toStringAsFixed(1)} Mbps • Ping ${r.pingMs.toStringAsFixed(0)}ms (${r.classification})";
+          _download = r.downloadMbps;
+          _ping = r.pingMs;
+          _jitter = r.jitterMs;
           _testing = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _result = "Erro: $e";
+          _error = "Erro: $e";
           _testing = false;
         });
       }
@@ -494,30 +512,71 @@ class _SpeedTestDialogState extends State<_SpeedTestDialog> {
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text("Teste de Velocidade",
                 style: TextStyle(
                     fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            if (_testing)
-              const CircularProgressIndicator(color: AppTheme.accent)
-            else
-              const Icon(Icons.speed, color: AppTheme.accent, size: 48),
-            const SizedBox(height: 16),
-            Text(_result,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 15)),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            if (_testing) ...[
+              const CircularProgressIndicator(color: AppTheme.accent),
+              const SizedBox(height: 16),
+              const Text("Medindo... isso leva alguns segundos",
+                  style: TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 13)),
+            ] else if (_error.isNotEmpty) ...[
+              const Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
+              const SizedBox(height: 12),
+              Text(_error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppTheme.danger)),
+            ] else ...[
+              // Download em destaque grande
+              Text(_download.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: 56,
+                    fontWeight: FontWeight.w900,
+                    color: _qualityColor,
+                    height: 1,
+                  )),
+              const Text("Mbps de download",
+                  style: TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 14)),
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _qualityColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _qualityColor.withValues(alpha: 0.5)),
+                ),
+                child: Text(_qualityLabel,
+                    style: TextStyle(
+                        color: _qualityColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13)),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _metric("Ping", "${_ping.toStringAsFixed(0)} ms"),
+                  const SizedBox(width: 32),
+                  _metric("Jitter", "${_jitter.toStringAsFixed(0)} ms"),
+                ],
+              ),
+            ],
+            const SizedBox(height: 24),
             TVFocusableItem(
               autofocus: true,
               borderRadius: AppTheme.radiusMd,
               onTap: () => Navigator.of(context).pop(),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 32),
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 40),
                 decoration: BoxDecoration(
                   gradient: AppTheme.accentGradient,
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -531,6 +590,22 @@ class _SpeedTestDialogState extends State<_SpeedTestDialog> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _metric(String label, String value) {
+    return Column(
+      children: [
+        Text(value,
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary)),
+        const SizedBox(height: 2),
+        Text(label,
+            style: const TextStyle(
+                color: AppTheme.textMuted, fontSize: 11)),
+      ],
     );
   }
 }
