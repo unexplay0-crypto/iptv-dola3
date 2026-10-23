@@ -77,7 +77,7 @@ class _MainShellState extends State<MainShell> {
                               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                               decoration: BoxDecoration(
-                                color: selected ? AppTheme.accent.withOpacity(0.15) : Colors.transparent,
+                                color: selected ? AppTheme.accent.withValues(alpha: 0.15) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: selected ? AppTheme.accent : Colors.transparent, width: 1),
                               ),
