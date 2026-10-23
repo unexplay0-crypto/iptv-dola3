@@ -105,7 +105,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return SwitchListTile(
       title: Text(title),
       value: value,
-      activeColor: AppTheme.accent,
+      activeThumbColor: AppTheme.accent,
       onChanged: onChanged,
     );
   }
