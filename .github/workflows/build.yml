@@ -30,6 +30,9 @@ jobs:
           else
             echo "gradlew presente - scaffold Android OK"
           fi
+          # Remove o widget_test.dart padrao do contador (gerado pelo flutter create)
+          # que referencia MyApp — nosso app usa UnexPlayApp e tem seus proprios testes
+          rm -f test/widget_test.dart
       - name: Flutter pub get
         run: flutter pub get
       - name: Flutter analyze
