@@ -76,7 +76,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                 decoration: BoxDecoration(
-                  color: sel ? AppTheme.accent.withOpacity(0.15) : Colors.transparent,
+                  color: sel ? AppTheme.accent.withValues(alpha: 0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(g, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: sel ? AppTheme.accent : AppTheme.textPrimary, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
