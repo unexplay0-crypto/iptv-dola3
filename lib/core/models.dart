@@ -1,4 +1,5 @@
 /// Modelos de domínio do UNEX PLAY.
+library;
 
 enum ContentType { live, movie, episode }
 

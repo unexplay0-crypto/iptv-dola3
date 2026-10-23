@@ -37,8 +37,9 @@ class SharedStreamEngine {
 
     Object? lastError;
     for (final h in attempts) {
+      VideoPlayerController? c;
       try {
-        final c = VideoPlayerController.networkUrl(
+        c = VideoPlayerController.networkUrl(
           Uri.parse(item.url),
           httpHeaders: h,
           videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
@@ -53,7 +54,7 @@ class SharedStreamEngine {
       } catch (e) {
         lastError = e;
         try {
-          c.dispose();
+          await c?.dispose();
         } catch (_) {}
       }
     }
