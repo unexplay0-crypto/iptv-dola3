@@ -68,7 +68,7 @@ class AppStorage {
   }
 
   Future<AppCredentials> _loadCreds() async {
-    String? read(String k) async {
+    Future<String?> read(String k) async {
       if (!_secureAvailable) return _prefs.getString(k);
       try {
         return await _secure.read(key: k);
