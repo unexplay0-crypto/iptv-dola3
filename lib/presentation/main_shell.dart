@@ -185,24 +185,4 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Widget _buildPage(int i) {
-    switch (i) {
-      case 0:
-        return const HomeScreen();
-      case 1:
-        return const LiveTvScreen();
-      case 2:
-        return const MoviesScreen();
-      case 3:
-        return const SeriesScreen();
-      case 4:
-        return const FavoritesScreen();
-      case 5:
-        return const HistoryScreen();
-      case 6:
-        return const SettingsScreen();
-      default:
-        return const HomeScreen();
-    }
-  }
 }
