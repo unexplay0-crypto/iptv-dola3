@@ -7,6 +7,7 @@ import '../../data/repositories/content_repository.dart';
 import '../../widgets/tv_focusable_item.dart';
 import '../player/player_screen.dart';
 
+/// Favoritos — grid de pôsteres grandes (4 colunas).
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
@@ -14,9 +15,13 @@ class FavoritesScreen extends StatefulWidget {
   State<FavoritesScreen> createState() => _FavoritesScreenState();
 }
 
-class _FavoritesScreenState extends State<FavoritesScreen> {
+class _FavoritesScreenState extends State<FavoritesScreen>
+    with AutomaticKeepAliveClientMixin {
   List<MediaItem> _items = [];
   bool _loading = true;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -32,29 +37,100 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
+    super.build(context);
+    if (_loading)
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.accent));
     if (_items.isEmpty) {
-      return const Center(child: Text("Nenhum favorito ainda. Segure OK sobre um canal para favoritar.", style: TextStyle(color: AppTheme.textSecondary)));
+      return const Center(
+          child: Text(
+              "Nenhum favorito ainda. Segure OK sobre um item para favoritar.",
+              style: TextStyle(color: AppTheme.textSecondary)));
     }
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, childAspectRatio: 0.8, crossAxisSpacing: 10, mainAxisSpacing: 10),
-      itemCount: _items.length,
-      itemBuilder: (_, i) {
-        final item = _items[i];
-        return TVFocusableItem(
-          autofocus: i == 0,
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PlayerScreen(item: item))),
-          onLongPress: () {
-            AppStorage.instance.toggleFavorite(item.id);
-            _load();
-          },
-          child: Container(color: AppTheme.surface, padding: const EdgeInsets.all(8), child: Column(children: [
-            Expanded(child: item.logo != null ? CachedNetworkImage(imageUrl: item.logo!, fit: BoxFit.contain, errorWidget: (_, __, ___) => const Icon(Icons.star, color: Colors.grey)) : const Icon(Icons.star, color: Colors.grey)),
-            const SizedBox(height: 6),
-            Text(item.name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
-          ])),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(4, 0, 4, 14),
+          child: Text("Favoritos", style: AppTheme.titleH1),
+        ),
+        Expanded(
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              childAspectRatio: 0.62,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            itemCount: _items.length,
+            itemBuilder: (_, i) {
+              final item = _items[i];
+              final isVod = item.type != ContentType.live;
+              return TVFocusableItem(
+                autofocus: i == 0,
+                borderRadius: AppTheme.radiusPoster,
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => PlayerScreen(item: item))),
+                onLongPress: () {
+                  AppStorage.instance.toggleFavorite(item.id);
+                  _load();
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius:
+                        BorderRadius.circular(AppTheme.radiusPoster),
+                    boxShadow: AppTheme.cardShadow,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      item.logo != null && item.logo!.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: item.logo!,
+                              fit: isVod ? BoxFit.cover : BoxFit.contain,
+                              errorWidget: (_, __, ___) => const Center(
+                                  child: Icon(Icons.star,
+                                      size: 40, color: AppTheme.textMuted)),
+                            )
+                          : const Center(
+                              child: Icon(Icons.star,
+                                  size: 40, color: AppTheme.textMuted)),
+                      const DecoratedBox(
+                          decoration:
+                              BoxDecoration(gradient: AppTheme.cardGradient)),
+                      const Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Icon(Icons.favorite,
+                            color: AppTheme.danger, size: 20),
+                      ),
+                      if (item.quality != null && item.quality!.isNotEmpty)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: AppTheme.qualityBadge(item.quality),
+                        ),
+                      Positioned(
+                        left: 10,
+                        right: 10,
+                        bottom: 10,
+                        child: Text(
+                          item.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.posterTitle,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

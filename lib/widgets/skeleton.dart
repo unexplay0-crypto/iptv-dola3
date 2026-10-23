@@ -6,19 +6,26 @@ class SkeletonCard extends StatefulWidget {
   final double width;
   final double height;
   final double borderRadius;
-  const SkeletonCard({super.key, required this.width, required this.height, this.borderRadius = 8});
+  const SkeletonCard(
+      {super.key,
+      required this.width,
+      required this.height,
+      this.borderRadius = 8});
 
   @override
   State<SkeletonCard> createState() => _SkeletonCardState();
 }
 
-class _SkeletonCardState extends State<SkeletonCard> with SingleTickerProviderStateMixin {
+class _SkeletonCardState extends State<SkeletonCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200))
+      ..repeat();
   }
 
   @override
@@ -42,7 +49,9 @@ class _SkeletonCardState extends State<SkeletonCard> with SingleTickerProviderSt
               end: Alignment.centerRight,
               colors: [
                 AppTheme.skeleton,
-                Color.lerp(AppTheme.skeleton, AppTheme.skeletonShimmer, _ctrl.value) ?? AppTheme.skeletonShimmer,
+                Color.lerp(AppTheme.skeleton, AppTheme.skeletonShimmer,
+                        _ctrl.value) ??
+                    AppTheme.skeletonShimmer,
                 AppTheme.skeleton,
               ],
             ),
@@ -53,16 +62,25 @@ class _SkeletonCardState extends State<SkeletonCard> with SingleTickerProviderSt
   }
 }
 
+/// Grid de skeletons com proporção de pôster (2:3) — 4 colunas.
 class SkeletonGrid extends StatelessWidget {
   final int count;
   const SkeletonGrid({super.key, this.count = 12});
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: List.generate(count, (_) => const SkeletonCard(width: 140, height: 200)),
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        childAspectRatio: 0.62,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: count,
+      itemBuilder: (_, __) => const SkeletonCard(
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: AppTheme.radiusPoster),
     );
   }
 }
