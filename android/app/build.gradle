@@ -73,5 +73,5 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.10"
+    // KGP 2.x adiciona kotlin-stdlib automaticamente
 }
