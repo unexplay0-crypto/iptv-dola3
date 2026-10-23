@@ -188,15 +188,3 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 }
-
-extension on ContentRepository {
-  Future<List<MediaItem>> itemsByTypeSeriesHack() async {
-    final series = await allSeriesKeys();
-    return byIds(series);
-  }
-
-  Future<List<String>> allSeriesKeys() async {
-    final s = await series();
-    return s.map((e) => "series_${e.key}").toList();
-  }
-}
