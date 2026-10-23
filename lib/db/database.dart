@@ -64,6 +64,12 @@ class AppDatabase {
   Future<int> count() async =>
       Sqflite.firstIntValue(await (await db).rawQuery("SELECT COUNT(*) FROM media")) ?? 0;
 
+  /// Apaga todo o catalogo (usado no logout / troca de conta).
+  Future<void> clearAll() async {
+    final d = await db;
+    await d.delete("media");
+  }
+
   Future<List<String>> groupsForType(ContentType type) async {
     final rows = await (await db).query(
       "media",

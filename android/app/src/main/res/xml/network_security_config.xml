@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Cleartext HTTP e exigido pela maioria dos provedores IPTV (streams HTTP).
+     Trust anchors apenas do sistema — certificados de usuario nao sao
+     confiados, mitigando MITM via CA instalada pelo usuario/malware. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
 </network-security-config>

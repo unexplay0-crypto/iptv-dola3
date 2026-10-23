@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'models.dart';
 
-/// Armazenamento local simples (preferências). Para credenciais sensíveis
-/// em produção, recomendase flutter_secure_storage.
+/// Armazenamento local. Credenciais do usuário (DNS/usuário/senha) são
+/// salvas no Keystore via flutter_secure_storage, com fallback automático
+/// para SharedPreferences se o armazenamento seguro falhar. Mantemos um
+/// cache em memória para que o getter [credentials] continue síncrono.
 class AppStorage {
   static const _kDns = "dns";
   static const _kUser = "username";
@@ -19,50 +22,122 @@ class AppStorage {
   static const _kSubtitlePref = "subtitle_pref";
   static const _kUiSound = "ui_sound";
   static const _kLastChannel = "last_channel";
-
   static const defaultPin = "0000";
 
   late SharedPreferences _prefs;
+  static const FlutterSecureStorage _secure = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  bool _secureAvailable = true;
+  AppCredentials _cachedCreds = const AppCredentials();
+
   static final AppStorage instance = AppStorage._();
   AppStorage._();
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    try {
+      await _secure.write(key: "_probe", value: "1");
+      await _secure.delete(key: "_probe");
+      _secureAvailable = true;
+    } catch (_) {
+      _secureAvailable = false;
+    }
+    // Migra credenciais antigas (plaintext) para o armazenamento seguro
+    final oldDns = _prefs.getString(_kDns);
+    if (_secureAvailable && oldDns != null && oldDns.isNotEmpty) {
+      try {
+        await _secure.write(key: _kDns, value: oldDns);
+        await _secure.write(key: _kUser, value: _prefs.getString(_kUser) ?? "");
+        await _secure.write(key: _kPass, value: _prefs.getString(_kPass) ?? "");
+        final m3u = _prefs.getString(_kM3u);
+        if (m3u != null) await _secure.write(key: _kM3u, value: m3u);
+        final act = _prefs.getString("activation_code");
+        if (act != null) await _secure.write(key: "activation_code", value: act);
+        await _prefs.remove(_kDns);
+        await _prefs.remove(_kUser);
+        await _prefs.remove(_kPass);
+        await _prefs.remove(_kM3u);
+        await _prefs.remove("activation_code");
+      } catch (_) {
+        _secureAvailable = false;
+      }
+    }
+    // Carrega credenciais para o cache em memória (getter síncrono)
+    _cachedCreds = await _loadCreds();
   }
 
-  // Credenciais
+  Future<AppCredentials> _loadCreds() async {
+    String? read(String k) async {
+      if (!_secureAvailable) return _prefs.getString(k);
+      try {
+        return await _secure.read(key: k);
+      } catch (_) {
+        return _prefs.getString(k);
+      }
+    }
+    return AppCredentials(
+      dns: await read(_kDns) ?? "",
+      username: await read(_kUser) ?? "",
+      password: await read(_kPass) ?? "",
+      m3uUrl: await read(_kM3u),
+      activationCode: await read("activation_code"),
+    );
+  }
+
+  // Credenciais (getter síncrono via cache em memória)
+  AppCredentials get credentials => _cachedCreds;
+
   Future<void> saveCredentials(AppCredentials c) async {
-    await _prefs.setString(_kDns, c.dns);
-    await _prefs.setString(_kUser, c.username);
-    await _prefs.setString(_kPass, c.password);
-    if (c.m3uUrl != null) await _prefs.setString(_kM3u, c.m3uUrl!);
+    _cachedCreds = c;
+    Future<void> write(String k, String v) async {
+      if (!_secureAvailable) {
+        await _prefs.setString(k, v);
+        return;
+      }
+      try {
+        await _secure.write(key: k, value: v);
+      } catch (_) {
+        await _prefs.setString(k, v);
+      }
+    }
+    await write(_kDns, c.dns);
+    await write(_kUser, c.username);
+    await write(_kPass, c.password);
+    if (c.m3uUrl != null) {
+      await write(_kM3u, c.m3uUrl!);
+    }
     if (c.activationCode != null) {
-      await _prefs.setString("activation_code", c.activationCode!);
+      await write("activation_code", c.activationCode!);
     }
   }
 
-  AppCredentials get credentials => AppCredentials(
-        dns: _prefs.getString(_kDns) ?? "",
-        username: _prefs.getString(_kUser) ?? "",
-        password: _prefs.getString(_kPass) ?? "",
-        m3uUrl: _prefs.getString(_kM3u),
-        activationCode: _prefs.getString("activation_code"),
-      );
-
-  bool get isLoggedIn => credentials.dns.isNotEmpty || (credentials.m3uUrl?.isNotEmpty ?? false);
+  bool get isLoggedIn =>
+      _cachedCreds.dns.isNotEmpty ||
+      (_cachedCreds.m3uUrl?.isNotEmpty ?? false);
 
   Future<void> clearCredentials() async {
-    await _prefs.remove(_kDns);
-    await _prefs.remove(_kUser);
-    await _prefs.remove(_kPass);
-    await _prefs.remove(_kM3u);
-    await _prefs.remove("activation_code");
+    _cachedCreds = const AppCredentials();
+    Future<void> delete(String k) async {
+      if (!_secureAvailable) {
+        await _prefs.remove(k);
+        return;
+      }
+      try {
+        await _secure.delete(key: k);
+      } catch (_) {
+        await _prefs.remove(k);
+      }
+    }
+    for (final k in [_kDns, _kUser, _kPass, _kM3u, "activation_code"]) {
+      await delete(k);
+      await _prefs.remove(k);
+    }
   }
 
   // PIN parental
   String get pin => _prefs.getString(_kPin) ?? defaultPin;
   Future<void> setPin(String pin) async => _prefs.setString(_kPin, pin);
-
   bool get adultUnlocked => _prefs.getBool(_kAdultUnlocked) ?? false;
   Future<void> setAdultUnlocked(bool v) async => _prefs.setBool(_kAdultUnlocked, v);
 

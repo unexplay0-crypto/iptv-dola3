@@ -53,7 +53,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                if (progress != null) LinearProgressIndicator(value: (progress / 100 / 60 / 1000).clamp(0.0, 1.0), backgroundColor: Colors.white12, color: AppTheme.accent, minHeight: 3),
+                if (progress != null)
+                  const Text("Continuar de onde parou", style: TextStyle(color: AppTheme.accent, fontSize: 11)),
               ])),
               const Icon(Icons.play_arrow, color: AppTheme.textSecondary),
             ]),

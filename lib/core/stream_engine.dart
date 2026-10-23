@@ -1,15 +1,21 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
 import 'models.dart';
 
 /// Motor de reprodução singleton (SharedStreamEngine).
-/// Tenta múltiplas estratégias de headers em sequência, normaliza a URL
-/// e gerencia reconexão automática para streams ao vivo.
+/// Expõe [controllerNotifier] para que a UI reconstrua o VideoPlayer quando
+/// a reconexão automática troca o controller (antes a UI ficava com o
+/// controller antigo descartado → tela preta).
 class SharedStreamEngine {
   static final SharedStreamEngine instance = SharedStreamEngine._();
   SharedStreamEngine._();
 
-  VideoPlayerController? controller;
+  /// Notifica a UI sempre que o controller ativo muda (reconexão).
+  final ValueNotifier<VideoPlayerController?> controllerNotifier =
+      ValueNotifier(null);
+
+  VideoPlayerController? get controller => controllerNotifier.value;
   MediaItem? currentItem;
   bool _reconnecting = false;
 
@@ -21,18 +27,13 @@ class SharedStreamEngine {
     "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36",
   ];
 
-  /// Normaliza a URL: remove espaços em branco, quebras de linha e
-  /// garante codificação mínima para o ExoPlayer abrir sem "Source error".
   static String normalizeUrl(String raw) {
     var s = raw.trim().replaceAll(RegExp(r"\s+"), "");
-    // Remove pipe headers residuais (já foram separados no parser, mas garante)
     final pipeIdx = s.indexOf("|");
     if (pipeIdx > 0) s = s.substring(0, pipeIdx);
     return s;
   }
 
-  /// Abre um stream tentando headers em sequência. Retorna o controller
-  /// inicializado ou lança exceção se todas as tentativas falharem.
   Future<VideoPlayerController> open(MediaItem item) async {
     await disposeCurrent();
     currentItem = item;
@@ -40,13 +41,10 @@ class SharedStreamEngine {
     final baseHeaders = Map<String, String>.from(item.headers);
 
     final attempts = <Map<String, String>>[];
-    // 1. headers do item + UA conhecido (prioriza o que o servidor espera)
     for (final ua in _userAgents) {
       attempts.add({...baseHeaders, "User-Agent": ua});
     }
-    // 2. apenas headers do item (sem UA forçado)
     attempts.add({...baseHeaders});
-    // 3. sem headers específicos
     attempts.add({});
 
     Object? lastError;
@@ -62,7 +60,7 @@ class SharedStreamEngine {
             ? const Duration(seconds: 8)
             : const Duration(seconds: 15);
         await c.initialize().timeout(timeout);
-        controller = c;
+        controllerNotifier.value = c;
         _autoReconnectLive(c, item, cleanUrl, h);
         return c;
       } catch (e) {
@@ -75,9 +73,8 @@ class SharedStreamEngine {
     throw lastError ?? Exception("Não foi possível abrir o stream");
   }
 
-  /// Reconexão silenciosa para canais ao vivo (até 5 tentativas com backoff).
-  void _autoReconnectLive(
-      VideoPlayerController c, MediaItem item, String url, Map<String, String> headers) {
+  void _autoReconnectLive(VideoPlayerController c, MediaItem item, String url,
+      Map<String, String> headers) {
     if (item.type != ContentType.live) return;
     c.addListener(() async {
       if (c.value.hasError && !_reconnecting) {
@@ -91,14 +88,14 @@ class SharedStreamEngine {
               httpHeaders: headers,
             );
             await nc.initialize().timeout(const Duration(seconds: 10));
-            await c.dispose();
-            controller = nc;
+            try {
+              await c.dispose();
+            } catch (_) {}
+            controllerNotifier.value = nc; // UI rebuilda automaticamente
             await nc.play();
             _reconnecting = false;
             return;
-          } catch (_) {
-            // continua tentando
-          }
+          } catch (_) {}
         }
         _reconnecting = false;
       }
@@ -107,9 +104,9 @@ class SharedStreamEngine {
 
   Future<void> disposeCurrent() async {
     try {
-      await controller?.dispose();
+      await controllerNotifier.value?.dispose();
     } catch (_) {}
-    controller = null;
+    controllerNotifier.value = null;
     currentItem = null;
   }
 }

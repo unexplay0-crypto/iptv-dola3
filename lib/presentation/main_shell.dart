@@ -29,6 +29,16 @@ class _MainShellState extends State<MainShell> {
     ("Configurações", Icons.settings_outlined, Icons.settings),
   ];
 
+  static const _pages = [
+    HomeScreen(),
+    LiveTvScreen(),
+    MoviesScreen(),
+    SeriesScreen(),
+    FavoritesScreen(),
+    HistoryScreen(),
+    SettingsScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,15 +174,9 @@ class _MainShellState extends State<MainShell> {
                   ),
                 ),
                 // Conteúdo
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: KeyedSubtree(
-                      key: ValueKey(_index),
-                      child: _buildPage(_index),
-                    ),
-                  ),
-                ),
+                // IndexedStack preserva o estado de cada aba (posição de
+                // scroll, busca) em vez de recriar a página a cada troca.
+                Expanded(child: IndexedStack(index: _index, children: _pages)),
               ],
             ),
           ),

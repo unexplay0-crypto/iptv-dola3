@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../core/storage.dart';
+import '../../db/database.dart';
 import '../../data/speed_test_service.dart';
 import '../../widgets/tv_focusable_item.dart';
 import '../../widgets/pin_dialog.dart';
@@ -55,14 +56,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: TextField(controller: ctrl, keyboardType: TextInputType.number, maxLength: 4, obscureText: true, decoration: const InputDecoration(hintText: "0000")),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text("Salvar")),
+          TextButton(onPressed: () {
+            final pin = ctrl.text.trim();
+            if (pin.length != 4 || int.tryParse(pin) == null) {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("O PIN deve ter exatamente 4 dígitos numéricos.")));
+              return;
+            }
+            Navigator.pop(context, pin);
+          }, child: const Text("Salvar")),
         ],
       ),
     );
   }
 
-  void _logout() {
-    AppStorage.instance.clearCredentials();
+  void _logout() async {
+    await AppDatabase.instance.clearAll(); // apaga catálogo do usuário anterior
+    await AppStorage.instance.clearCredentials();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
   }
 

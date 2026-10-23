@@ -175,8 +175,22 @@ class M3uParser {
     return n.replaceAll(RegExp(r"\s+"), " ").trim();
   }
 
+  /// Hash FNV-1a 64-bit determinístico (puro Dart, sem dependência).
+  /// Reduz drasticamente colisões de ID vs hashCode de 32 bits.
+  static int _fnv1a64(String s) {
+    var hash = 0xcbf29ce484222325;
+    for (final unit in s.codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+    }
+    return hash;
+  }
+
   static String _idFor(String? tvgId, String url, String name) {
-    if (tvgId != null && tvgId.isNotEmpty) return tvgId;
-    return (url + name).hashCode.abs().toString();
+    if (tvgId != null && tvgId.isNotEmpty) {
+      // tvg-id pode se repetir entre canais diferentes; combina com a URL
+      return _fnv1a64("$tvgId|$url").toRadixString(36);
+    }
+    return _fnv1a64("$url|$name").toRadixString(36);
   }
 }

@@ -33,10 +33,27 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    _engine.controllerNotifier.addListener(_onEngineController);
     _init();
   }
 
+  /// Reconectou: o engine trocou o controller — atualiza a UI para não ficar
+  /// com o controller antigo descartado (tela preta).
+  void _onEngineController() {
+    if (mounted) setState(() => _ctrl = _engine.controllerNotifier.value);
+  }
+
   Future<void> _init() async {
+    // Placeholder de série (metadado, não reproduzível) — volta para a lista
+    if (widget.item.id.startsWith("series_")) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Selecione um episódio da série para reproduzir.")),
+        );
+        Navigator.of(context).pop();
+      }
+      return;
+    }
     // Controle parental
     if (widget.item.isAdult && !AppStorage.instance.adultUnlocked) {
       final ok = await PinDialog.request(context, title: "Conteúdo adulto — digite o PIN");
@@ -130,6 +147,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _engine.controllerNotifier.removeListener(_onEngineController);
     _osdTimer?.cancel();
     _progressTimer?.cancel();
     if (_isVod && _ctrl != null && _ctrl!.value.isInitialized) {
