@@ -94,10 +94,10 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.danger.withValues(alpha: 0.15),
+                  color: AppTheme.danger.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: AppTheme.danger.withValues(alpha: 0.4)),
+                      color: AppTheme.danger.withOpacity(0.4)),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Container(
@@ -137,7 +137,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                           )
                         : null,
                     filled: true,
-                    fillColor: AppTheme.surface.withValues(alpha: 0.8),
+                    fillColor: AppTheme.surface.withOpacity(0.8),
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     border: OutlineInputBorder(
@@ -162,7 +162,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                 width: cfg.sideMenuWidth,
                 margin: EdgeInsets.only(right: cfg.cardSpacing),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface.withValues(alpha: 0.55),
+                  color: AppTheme.surface.withOpacity(0.55),
                   borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   border: Border.all(color: AppTheme.glassBorder),
                 ),
@@ -194,7 +194,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                               ? [
                                   BoxShadow(
                                     color: AppTheme.accent
-                                        .withValues(alpha: 0.3),
+                                        .withOpacity(0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 2),
                                   )
@@ -246,12 +246,11 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                                     horizontal: 14, vertical: 12),
                                 decoration: BoxDecoration(
                                   color: AppTheme.surface
-                                      .withValues(alpha: 0.75),
+                                      .withOpacity(0.75),
                                   borderRadius: BorderRadius.circular(
                                       AppTheme.radiusChannel),
                                   border: Border.all(
-                                      color: Colors.white.withValues(
-                                          alpha: 0.04)),
+                                      color: Colors.white.withOpacity(0.04)),
                                 ),
                                 child: Row(
                                   children: [

@@ -145,7 +145,7 @@ class _BannerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
+              color: Colors.black.withOpacity(0.5),
               blurRadius: 28,
               offset: const Offset(0, 10),
             ),
@@ -204,7 +204,7 @@ class _BannerCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
+                      color: Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       border: Border.all(color: AppTheme.glassBorder),
                     ),
@@ -222,7 +222,7 @@ class _BannerCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                               boxShadow: [
                                 BoxShadow(
-                                    color: AppTheme.accent.withValues(alpha: 0.4),
+                                    color: AppTheme.accent.withOpacity(0.4),
                                     blurRadius: 10),
                               ],
                             ),
@@ -240,7 +240,7 @@ class _BannerCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.12),
+                              color: Colors.white.withOpacity(0.12),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(color: Colors.white24),
                             ),

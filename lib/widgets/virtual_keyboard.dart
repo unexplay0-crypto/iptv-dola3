@@ -135,9 +135,9 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
           height: 46,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.10),
+            color: Colors.white.withOpacity(0.10),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            border: Border.all(color: Colors.white.withOpacity(0.14)),
           ),
           child: Text(display,
               style: const TextStyle(
@@ -169,13 +169,13 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             color: active
-                ? AppTheme.accent.withValues(alpha: 0.35)
-                : Colors.white.withValues(alpha: 0.07),
+                ? AppTheme.accent.withOpacity(0.35)
+                : Colors.white.withOpacity(0.07),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
                 color: active
                     ? AppTheme.accent
-                    : Colors.white.withValues(alpha: 0.14)),
+                    : Colors.white.withOpacity(0.14)),
           ),
           child: Text(label,
               maxLines: 1,
@@ -238,8 +238,8 @@ class AdaptiveInputField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         color: active
-            ? Colors.white.withValues(alpha: 0.14)
-            : Colors.white.withValues(alpha: 0.07),
+            ? Colors.white.withOpacity(0.14)
+            : Colors.white.withOpacity(0.07),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
             color: active ? AppTheme.accent : AppTheme.glassBorder,
@@ -247,7 +247,7 @@ class AdaptiveInputField extends StatelessWidget {
         boxShadow: active
             ? [
                 BoxShadow(
-                    color: AppTheme.accent.withValues(alpha: 0.25),
+                    color: AppTheme.accent.withOpacity(0.25),
                     blurRadius: 12)
               ]
             : null,
@@ -320,14 +320,14 @@ class GlassInputField extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: active
-              ? Colors.white.withValues(alpha: 0.14)
-              : Colors.white.withValues(alpha: 0.07),
+              ? Colors.white.withOpacity(0.14)
+              : Colors.white.withOpacity(0.07),
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(
               color: active ? AppTheme.accent : AppTheme.glassBorder,
               width: active ? 1.5 : 1),
           boxShadow: active
-              ? [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.25), blurRadius: 12)]
+              ? [BoxShadow(color: AppTheme.accent.withOpacity(0.25), blurRadius: 12)]
               : null,
         ),
         child: TextField(

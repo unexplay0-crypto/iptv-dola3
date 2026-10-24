@@ -82,10 +82,10 @@ class _SeriesScreenState extends State<SeriesScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.gold.withValues(alpha: 0.15),
+                  color: AppTheme.gold.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                   border:
-                      Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
+                      Border.all(color: AppTheme.gold.withOpacity(0.4)),
                 ),
                 child: Text("${series.length} séries",
                     style: AppTheme.badge
@@ -116,7 +116,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                           )
                         : null,
                     filled: true,
-                    fillColor: AppTheme.surface.withValues(alpha: 0.8),
+                    fillColor: AppTheme.surface.withOpacity(0.8),
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     border: OutlineInputBorder(
@@ -142,7 +142,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                   width: cfg.sideMenuWidth,
                   margin: EdgeInsets.only(right: cfg.cardSpacing),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface.withValues(alpha: 0.55),
+                    color: AppTheme.surface.withOpacity(0.55),
                     borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                     border: Border.all(color: AppTheme.glassBorder),
                   ),
@@ -171,7 +171,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                                 ? [
                                     BoxShadow(
                                       color: AppTheme.accent
-                                          .withValues(alpha: 0.3),
+                                          .withOpacity(0.3),
                                       blurRadius: 12,
                                       offset: const Offset(0, 2),
                                     )
@@ -431,7 +431,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                                 ? [
                                     BoxShadow(
                                       color: AppTheme.accent
-                                          .withValues(alpha: 0.35),
+                                          .withOpacity(0.35),
                                       blurRadius: 14,
                                       offset: const Offset(0, 3),
                                     )
@@ -540,7 +540,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                                 boxShadow: [
                                   BoxShadow(
                                     color: AppTheme.accent
-                                        .withValues(alpha: 0.3),
+                                        .withOpacity(0.3),
                                     blurRadius: 10,
                                   ),
                                 ],

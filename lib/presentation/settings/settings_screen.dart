@@ -114,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: AppTheme.surface.withValues(alpha: 0.6),
+            color: AppTheme.surface.withOpacity(0.6),
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             border: Border.all(color: AppTheme.glassBorder),
           ),
@@ -138,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface.withValues(alpha: 0.6),
+          color: AppTheme.surface.withOpacity(0.6),
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: AppTheme.glassBorder),
         ),
@@ -146,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
           value: value,
           activeThumbColor: AppTheme.accent,
-          activeTrackColor: AppTheme.accent.withValues(alpha: 0.4),
+          activeTrackColor: AppTheme.accent.withOpacity(0.4),
           onChanged: onChanged,
         ),
       ),

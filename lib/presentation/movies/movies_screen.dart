@@ -88,10 +88,10 @@ class _MoviesScreenState extends State<MoviesScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.accent.withValues(alpha: 0.15),
+                  color: AppTheme.accent.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: AppTheme.accent.withValues(alpha: 0.4)),
+                      color: AppTheme.accent.withOpacity(0.4)),
                 ),
                 child: Text("${movies.length} títulos",
                     style: AppTheme.badge
@@ -122,7 +122,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                           )
                         : null,
                     filled: true,
-                    fillColor: AppTheme.surface.withValues(alpha: 0.8),
+                    fillColor: AppTheme.surface.withOpacity(0.8),
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     border: OutlineInputBorder(
@@ -147,7 +147,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                 width: 220,
                 margin: const EdgeInsets.only(right: 14),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface.withValues(alpha: 0.55),
+                  color: AppTheme.surface.withOpacity(0.55),
                   borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   border: Border.all(color: AppTheme.glassBorder),
                 ),
@@ -175,7 +175,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                               ? [
                                   BoxShadow(
                                     color: AppTheme.accent
-                                        .withValues(alpha: 0.3),
+                                        .withOpacity(0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 2),
                                   )

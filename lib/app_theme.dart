@@ -145,12 +145,12 @@ class AppTheme {
 
   static List<BoxShadow> focusGlow(Color color) => [
         BoxShadow(
-          color: color.withValues(alpha: 0.45),
+          color: color.withOpacity(0.45),
           blurRadius: 24,
           spreadRadius: 2,
         ),
         BoxShadow(
-          color: color.withValues(alpha: 0.18),
+          color: color.withOpacity(0.18),
           blurRadius: 56,
           spreadRadius: 8,
         ),
@@ -233,8 +233,8 @@ class AppTheme {
         labelLarge: TextStyle(color: textPrimary),
       ),
       focusColor: accent,
-      highlightColor: accent.withValues(alpha: 0.2),
-      splashColor: accent.withValues(alpha: 0.15),
+      highlightColor: accent.withOpacity(0.2),
+      splashColor: accent.withOpacity(0.15),
       dividerColor: Colors.white10,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -259,9 +259,9 @@ class AppTheme {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
+        color: color.withOpacity(0.18),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.55), width: 1),
+        border: Border.all(color: color.withOpacity(0.55), width: 1),
       ),
       child: Text(q, style: badge.copyWith(color: color, fontSize: 9)),
     );
@@ -271,9 +271,9 @@ class AppTheme {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: danger.withValues(alpha: 0.2),
+        color: danger.withOpacity(0.2),
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: danger.withValues(alpha: 0.6), width: 1),
+        border: Border.all(color: danger.withOpacity(0.6), width: 1),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: const [
         _LiveDot(),
@@ -375,7 +375,7 @@ class GlassContainer extends StatelessWidget {
             child: Container(
               padding: padding,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: opacity),
+                color: Colors.white.withOpacity(opacity),
                 borderRadius: border == null ? innerR : r,
                 border: border,
               ),
@@ -446,7 +446,7 @@ class _LiveDotState extends State<_LiveDot>
           color: AppTheme.danger,
           boxShadow: [
             BoxShadow(
-              color: AppTheme.danger.withValues(alpha: 0.3 + 0.7 * _ctrl.value),
+              color: AppTheme.danger.withOpacity(0.3 + 0.7 * _ctrl.value),
               blurRadius: 6,
               spreadRadius: 1 + 2 * _ctrl.value,
             ),

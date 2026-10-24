@@ -156,7 +156,7 @@ class _MainShellState extends State<MainShell> {
                     margin: const EdgeInsets.only(right: 16),
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.07),
+                      color: Colors.white.withOpacity(0.07),
                       borderRadius:
                           BorderRadius.circular(AppTheme.radiusXl),
                       border: Border.all(color: AppTheme.glassBorder),
@@ -208,7 +208,7 @@ class _MainShellState extends State<MainShell> {
                                         boxShadow: [
                                           BoxShadow(
                                             color: AppTheme.accent
-                                                .withValues(alpha: 0.45),
+                                                .withOpacity(0.45),
                                             blurRadius: 18,
                                             spreadRadius: 1,
                                           ),
@@ -269,7 +269,7 @@ class _MainShellState extends State<MainShell> {
                                         ? [
                                             BoxShadow(
                                               color: AppTheme.accent
-                                                  .withValues(alpha: 0.35),
+                                                  .withOpacity(0.35),
                                               blurRadius: 14,
                                               offset: const Offset(0, 3),
                                             )
@@ -328,7 +328,7 @@ class _MainShellState extends State<MainShell> {
                                     vertical: 12, horizontal: 14),
                                 decoration: BoxDecoration(
                                   color: AppTheme.surfaceHighlight
-                                      .withValues(alpha: 0.6),
+                                      .withOpacity(0.6),
                                   borderRadius:
                                       BorderRadius.circular(AppTheme.radiusMd),
                                   border:
@@ -356,7 +356,7 @@ class _MainShellState extends State<MainShell> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppTheme.surfaceHighlight
-                                  .withValues(alpha: 0.6),
+                                  .withOpacity(0.6),
                               borderRadius:
                                   BorderRadius.circular(AppTheme.radiusMd),
                               border:
@@ -569,9 +569,9 @@ class _SpeedTestDialogState extends State<_SpeedTestDialog> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _qualityColor.withValues(alpha: 0.15),
+                  color: _qualityColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _qualityColor.withValues(alpha: 0.5)),
+                  border: Border.all(color: _qualityColor.withOpacity(0.5)),
                 ),
                 child: Text(_qualityLabel,
                     style: TextStyle(
