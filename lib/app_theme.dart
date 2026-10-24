@@ -201,11 +201,6 @@ class AppTheme {
         elevation: 0,
         foregroundColor: textPrimary,
       ),
-      dialogTheme: DialogTheme(
-        backgroundColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusLg)),
-      ),
     );
   }
 
