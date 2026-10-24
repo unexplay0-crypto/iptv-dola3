@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_theme.dart';
+import '../core/device_config.dart';
 import 'tv_focusable_item.dart';
 
 /// Teclado virtual QWERTY do próprio app (estilo Gboard), em painel de vidro.
@@ -183,6 +184,92 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
                   color: active ? Colors.white : Colors.white70,
                   fontSize: label.length > 3 ? 12 : 16,
                   fontWeight: FontWeight.w700)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Campo de entrada ADAPTATIVO:
+///  - Na TV: usa [GlassInputField] (somente leitura) + o pai abre o
+///    [VirtualKeyboard] do app (TV não tem teclado físico/touch).
+///  - No celular: TextField editável normal — abre o teclado NATURAL do
+///    celular, sem o teclado virtual do app.
+///
+/// A escolha é automática via [DeviceConfig] — sem configuração do usuário.
+class AdaptiveInputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String? hint;
+  final bool obscureText;
+  final bool active;
+  final VoidCallback onSelect;
+  final TextInputType? keyboardType;
+  final int? maxLines;
+  const AdaptiveInputField({
+    super.key,
+    required this.controller,
+    required this.label,
+    this.hint,
+    this.obscureText = false,
+    required this.active,
+    required this.onSelect,
+    this.keyboardType,
+    this.maxLines = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isTv = DeviceConfig.of(context).isTv;
+    if (isTv) {
+      return GlassInputField(
+        controller: controller,
+        label: label,
+        hint: hint,
+        obscureText: obscureText,
+        active: active,
+        onSelect: onSelect,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+      );
+    }
+    // Modo celular: campo editável com teclado do sistema.
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      decoration: BoxDecoration(
+        color: active
+            ? Colors.white.withValues(alpha: 0.14)
+            : Colors.white.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+            color: active ? AppTheme.accent : AppTheme.glassBorder,
+            width: active ? 1.5 : 1),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                    color: AppTheme.accent.withValues(alpha: 0.25),
+                    blurRadius: 12)
+              ]
+            : null,
+      ),
+      child: TextField(
+        controller: controller,
+        autofocus: active,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        style: const TextStyle(
+            color: AppTheme.textPrimary, fontSize: 15, height: 1.4),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+              color: active ? AppTheme.accent : AppTheme.textSecondary,
+              fontSize: 13),
+          hintText: hint,
+          hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );

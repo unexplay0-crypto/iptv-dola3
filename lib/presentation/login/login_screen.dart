@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../core/device_config.dart';
 import '../../core/storage.dart';
 import '../../core/models.dart';
 import '../../data/repositories/content_repository.dart';
@@ -119,23 +120,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: AppTheme.textSecondary, fontSize: 14),
                             ),
                             const SizedBox(height: 28),
-                            // Campos (somente leitura — teclado virtual ao selecionar)
-                            GlassInputField(
+                            // Campos adaptativos: na TV abrem o teclado
+                            // virtual do app; no celular, o teclado nativo.
+                            AdaptiveInputField(
                               controller: _dnsCtrl,
                               label: "DNS (ex: http://servidor.com:8080)",
                               hint: "http://",
+                              keyboardType: TextInputType.url,
                               active: _active == _dnsCtrl,
                               onSelect: () => setState(() => _active = _dnsCtrl),
                             ),
                             const SizedBox(height: 14),
-                            GlassInputField(
+                            AdaptiveInputField(
                               controller: _userCtrl,
                               label: "Usuário",
                               active: _active == _userCtrl,
                               onSelect: () => setState(() => _active = _userCtrl),
                             ),
                             const SizedBox(height: 14),
-                            GlassInputField(
+                            AdaptiveInputField(
                               controller: _passCtrl,
                               label: "Senha",
                               obscureText: true,
@@ -221,8 +224,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // ===== Teclado virtual (só aparece ao selecionar campo) =====
-                      if (_active != null)
+                      // ===== Teclado virtual SÓ na TV (no celular usa o nativo) =====
+                      if (_active != null && DeviceConfig.of(context).isTv)
                         VirtualKeyboard(
                           controller: _active!,
                           obscureText: _active == _passCtrl,

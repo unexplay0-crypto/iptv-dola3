@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_theme.dart';
+import '../core/device_config.dart';
 import '../core/storage.dart';
 import '../data/speed_test_service.dart';
 import '../widgets/tv_focusable_item.dart';
@@ -118,7 +119,9 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final menuWidth = _menuCollapsed ? 76.0 : 210.0;
+    final cfg = DeviceConfig.of(context);
+    final collapsedW = (cfg.sideMenuWidth * 0.36).clamp(56.0, 90.0);
+    final menuWidth = _menuCollapsed ? collapsedW : cfg.sideMenuWidth;
     final days = AppStorage.instance.daysUntilExpiry;
     final expiryMillis = AppStorage.instance.expiryDateMillis;
     String? expiryText;

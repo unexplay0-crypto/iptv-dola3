@@ -1,6 +1,7 @@
 import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../core/device_config.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
 import '../../data/repositories/content_repository.dart';
@@ -65,6 +66,7 @@ class _SeriesScreenState extends State<SeriesScreen>
     super.build(context);
     if (_loading) return const Center(child: SkeletonGrid());
 
+    final cfg = DeviceConfig.of(context);
     final series = _filtered;
 
     return Column(
@@ -91,7 +93,7 @@ class _SeriesScreenState extends State<SeriesScreen>
               ),
               const Spacer(),
               SizedBox(
-                width: 300,
+                width: cfg.searchWidth,
                 height: 44,
                 child: TextField(
                   controller: _searchCtrl,
@@ -137,8 +139,8 @@ class _SeriesScreenState extends State<SeriesScreen>
               // Sidebar de categorias (glass) — apenas se houver grupos
               if (_groups.isNotEmpty)
                 Container(
-                  width: 220,
-                  margin: const EdgeInsets.only(right: 14),
+                  width: cfg.sideMenuWidth,
+                  margin: EdgeInsets.only(right: cfg.cardSpacing),
                   decoration: BoxDecoration(
                     color: AppTheme.surface.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(AppTheme.radiusLg),
@@ -199,12 +201,11 @@ class _SeriesScreenState extends State<SeriesScreen>
                         child: Text("Nenhuma série encontrada.",
                             style: TextStyle(color: AppTheme.textSecondary)))
                     : GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: cfg.posterWidth,
                           childAspectRatio: 0.62,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
+                          crossAxisSpacing: cfg.cardSpacing,
+                          mainAxisSpacing: cfg.cardSpacing,
                         ),
                         itemCount: series.length,
                         itemBuilder: (_, i) {
@@ -294,6 +295,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   late Map<int, List<MediaItem>> _seasons;
   late int _selectedSeason;
   bool _loadingEpisodes = false;
+  String? _error; // mensagem de erro visível com botão de retry
 
   @override
   void initState() {
@@ -311,20 +313,35 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final seriesId = key.replaceFirst("xtream_", "");
     final creds = AppStorage.instance.credentials;
     if (creds.dns.isEmpty || creds.username.isEmpty) return;
-    setState(() => _loadingEpisodes = true);
+    if (!mounted) return;
+    setState(() {
+      _loadingEpisodes = true;
+      _error = null;
+    });
     try {
       final client = XtreamApiClient(
           dns: creds.dns,
           username: creds.username,
           password: creds.password);
       final eps = await client.fetchSeriesInfo(seriesId);
+      if (!mounted) return;
       if (eps.isNotEmpty) {
-        _seasons = eps;
-        final nums = eps.keys.toList()..sort();
-        _selectedSeason = nums.first;
+        setState(() {
+          _seasons = eps;
+          final nums = eps.keys.toList()..sort();
+          _selectedSeason = nums.first;
+        });
+      } else {
+        setState(() => _error =
+            "O servidor não retornou episódios para esta série.");
       }
-    } catch (_) {}
-    if (mounted) setState(() => _loadingEpisodes = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error =
+          "Não foi possível carregar os episódios. Verifique a conexão e tente novamente.");
+    } finally {
+      if (mounted) setState(() => _loadingEpisodes = false);
+    }
   }
 
   @override
@@ -394,6 +411,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     itemBuilder: (_, i) {
                       final s = seasonNums[i];
                       final sel = s == _selectedSeason;
+                      final epCount = (_seasons[s] ?? []).length;
                       return TVFocusableItem(
                         borderRadius: 22,
                         onTap: () => setState(() => _selectedSeason = s),
@@ -420,7 +438,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                                   ]
                                 : null,
                           ),
-                          child: Text("Temporada $s",
+                          child: Text("T$s • $epCount ep",
                               style: TextStyle(
                                   color: sel
                                       ? Colors.black
@@ -439,6 +457,55 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     child: Center(
                         child: CircularProgressIndicator(
                             color: AppTheme.accent)))
+              else if (_error != null && _seasons.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            color: AppTheme.textMuted, size: 48),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: 320,
+                          child: Text(_error!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 14,
+                                  height: 1.4)),
+                        ),
+                        const SizedBox(height: 18),
+                        TVFocusableItem(
+                          borderRadius: AppTheme.radiusMd,
+                          onTap: _loadXtreamEpisodes,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.accentGradient,
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.radiusMd),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.refresh_rounded,
+                                    color: Colors.black, size: 18),
+                                SizedBox(width: 8),
+                                Text("Tentar novamente",
+                                    style: TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
               else if (episodes.isEmpty)
                 const Expanded(
                     child: Center(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../core/device_config.dart';
 import '../../core/storage.dart';
 import '../../core/models.dart';
 import '../../data/repositories/content_repository.dart';
@@ -129,10 +130,11 @@ class _M3ULoginScreenState extends State<M3ULoginScreen> {
                                   color: AppTheme.textSecondary, fontSize: 14),
                             ),
                             const SizedBox(height: 24),
-                            GlassInputField(
+                            AdaptiveInputField(
                               controller: _m3uCtrl,
                               label: "Link da lista M3U",
                               hint: "http://servidor.com/get.php?...",
+                              keyboardType: TextInputType.url,
                               maxLines: 3,
                               active: _active == _m3uCtrl,
                               onSelect: () => setState(() => _active = _m3uCtrl),
@@ -201,7 +203,8 @@ class _M3ULoginScreenState extends State<M3ULoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      if (_active != null)
+                      // Teclado virtual SÓ na TV.
+                      if (_active != null && DeviceConfig.of(context).isTv)
                         VirtualKeyboard(
                           controller: _active!,
                           onClose: () => setState(() => _active = null),

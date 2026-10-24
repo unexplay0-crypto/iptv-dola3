@@ -1,6 +1,7 @@
 import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../core/device_config.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
 import '../../data/repositories/content_repository.dart';
@@ -71,6 +72,7 @@ class _MoviesScreenState extends State<MoviesScreen>
     super.build(context);
     if (_loading) return const Center(child: SkeletonGrid());
 
+    final cfg = DeviceConfig.of(context);
     final movies = _filtered;
 
     return Column(
@@ -205,11 +207,11 @@ class _MoviesScreenState extends State<MoviesScreen>
                             style: TextStyle(color: AppTheme.textSecondary)))
                     : GridView.builder(
                         gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
+                            SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: cfg.posterWidth,
                           childAspectRatio: 0.62, // pôster 2:3 com espaço para título
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
+                          crossAxisSpacing: cfg.cardSpacing,
+                          mainAxisSpacing: cfg.cardSpacing,
                         ),
                         itemCount: movies.length,
                         itemBuilder: (_, i) {

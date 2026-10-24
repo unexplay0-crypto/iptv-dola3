@@ -1,6 +1,7 @@
 import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../core/device_config.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
 import '../../data/repositories/content_repository.dart';
@@ -76,6 +77,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
     super.build(context);
     if (_loading) return const Center(child: SkeletonGrid());
 
+    final cfg = DeviceConfig.of(context);
     final channels = _filtered;
 
     return Column(
@@ -112,7 +114,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
               const Spacer(),
               // Busca (filtro instantâneo em memória)
               SizedBox(
-                width: 300,
+                width: cfg.searchWidth,
                 height: 44,
                 child: TextField(
                   controller: _searchCtrl,
@@ -157,8 +159,8 @@ class _LiveTvScreenState extends State<LiveTvScreen>
             children: [
               // Sidebar de categorias (glass)
               Container(
-                width: 220,
-                margin: const EdgeInsets.only(right: 14),
+                width: cfg.sideMenuWidth,
+                margin: EdgeInsets.only(right: cfg.cardSpacing),
                 decoration: BoxDecoration(
                   color: AppTheme.surface.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(AppTheme.radiusLg),

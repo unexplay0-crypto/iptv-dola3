@@ -169,45 +169,107 @@ class XtreamApiClient {
     }
   }
 
+  /// Converte valor dinâmico (int ou String, com zeros à esquerda) para int.
+  /// Nunca lança — usa [fallback] em caso de falha de parse.
+  static int _toInt(dynamic v, int fallback) {
+    if (v == null) return fallback;
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    final s = v.toString().trim();
+    if (s.isEmpty) return fallback;
+    final parsed = int.tryParse(s);
+    if (parsed != null) return parsed;
+    final d = double.tryParse(s);
+    if (d != null) return d.toInt();
+    return fallback;
+  }
+
   /// Episódios de uma série específica (carregamento sob demanda).
   /// Retorna mapa season -> lista de episódios ordenada por número ascendente.
+  ///
+  /// Robustez (corrige falha silenciosa que zerava as temporadas):
+  ///  - season/episode_num/id podem vir como int OU String (com zeros à
+  ///    esquerda) — parse via [_toInt], sem cast `as int` que quebrava.
+  ///  - `episodes` pode vir como Lista plana OU como Map<season, List>
+  ///    (variação comum entre painéis Xtream) — ambos os formatos aceitos.
+  ///  - Até 2 tentativas com timeout maior (30s).
   Future<Map<int, List<MediaItem>>> fetchSeriesInfo(String seriesId) async {
-    try {
-      final resp = await http
-          .get(_action("get_series_info", {"series_id": seriesId}))
-          .timeout(const Duration(seconds: 20));
-      if (resp.statusCode != 200) return {};
-      final json = jsonDecode(resp.body);
-      final episodes = json["episodes"] as List? ?? [];
-      final out = <int, List<MediaItem>>{};
-      for (final ep in episodes) {
-        final season = (ep["season"] ?? 1) as int;
-        final num = (ep["episode_num"] ?? 1) as int;
-        final ext = (ep["container_extension"] ?? "mp4").toString();
-        final id = (ep["id"] ?? "").toString();
-        final info = ep["info"] is Map ? ep["info"] as Map : const {};
-        out.putIfAbsent(season, () => []).add(MediaItem(
-              id: "ep_$id",
-              name: (ep["title"] ?? "Episódio $num").toString(),
-              logo: info["movie_image"]?.toString(),
-              group: "",
-              url: "$_base/series/$username/$password/$id.$ext",
-              headers: const {},
-              type: ContentType.episode,
-              seriesKey: "xtream_$seriesId",
-              season: season,
-              episode: num,
-              durationSec: int.tryParse((info["duration"] ?? "0").toString()),
-            ));
+    Exception? lastError;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final resp = await http
+            .get(_action("get_series_info", {"series_id": seriesId}))
+            .timeout(const Duration(seconds: 30));
+        if (resp.statusCode != 200) {
+          lastError = Exception("HTTP ${resp.statusCode}");
+          continue;
+        }
+        final dynamic json = jsonDecode(resp.body);
+        if (json is! Map) return {};
+        final dynamic episodes = json["episodes"];
+        final out = <int, List<MediaItem>>{};
+        void addEpisode(dynamic ep, {int? seasonHint}) {
+          if (ep is! Map) return;
+          final season = seasonHint ?? _toInt(ep["season"], 1);
+          final num = _toInt(ep["episode_num"], _toInt(ep["episode"], 1));
+          final ext = (ep["container_extension"]?.toString().trim().isNotEmpty ?? false)
+              ? ep["container_extension"].toString()
+              : "mp4";
+          final id = (ep["id"]?.toString().trim().isNotEmpty ?? false)
+              ? ep["id"].toString()
+              : "s${season}e$num";
+          final info = ep["info"] is Map ? ep["info"] as Map : const {};
+          final title = (ep["title"]?.toString().trim().isNotEmpty ?? false)
+              ? ep["title"].toString()
+              : (info["title"]?.toString().trim().isNotEmpty ?? false)
+                  ? info["title"].toString()
+                  : "Episódio $num";
+          final logo = info["movie_image"]?.toString() ?? ep["cover"]?.toString() ?? ep["stream_icon"]?.toString();
+          out.putIfAbsent(season, () => []).add(MediaItem(
+                id: "ep_$id",
+                name: title,
+                logo: (logo?.isNotEmpty ?? false) ? logo : null,
+                group: "",
+                url: "$_base/series/$username/$password/$id.$ext",
+                headers: const {},
+                type: ContentType.episode,
+                seriesKey: "xtream_$seriesId",
+                season: season,
+                episode: num,
+                durationSec: int.tryParse((info["duration"] ?? "0").toString()),
+              ));
+        }
+        if (episodes is List) {
+          for (final ep in episodes) {
+            addEpisode(ep);
+          }
+        } else if (episodes is Map) {
+          // Formato alternativo: {"1": [ep1, ep2], "2": [...]}
+          episodes.forEach((k, v) {
+            final season = _toInt(k, 1);
+            if (v is List) {
+              for (final ep in v) {
+                addEpisode(ep, seasonHint: season);
+              }
+            } else {
+              addEpisode(v, seasonHint: season);
+            }
+          });
+        }
+        // Remove temporadas sem episódios e ordena cada uma.
+        out.removeWhere((_, l) => l.isEmpty);
+        for (final l in out.values) {
+          l.sort((a, b) => (a.episode ?? 0).compareTo(b.episode ?? 0));
+        }
+        return out;
+      } catch (e) {
+        lastError = e is Exception ? e : Exception(e.toString());
+        await Future.delayed(Duration(milliseconds: 400 * (attempt + 1)));
       }
-      // Garante episódios numerados do menor para o maior em cada temporada
-      for (final l in out.values) {
-        l.sort((a, b) => (a.episode ?? 0).compareTo(b.episode ?? 0));
-      }
-      return out;
-    } catch (_) {
-      return {};
     }
+    // Falhou após tentativas — propaga para a UI mostrar erro/retry.
+    if (lastError != null) throw lastError;
+    return {};
   }
 
   String? _qualityFromRating(dynamic rating) {

@@ -51,9 +51,49 @@ class AppTheme {
   static const LinearGradient glassSpecular = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0x28FFFFFF), Color(0x00FFFFFF)],
-    stops: [0.0, 0.5],
+    colors: [Color(0x33FFFFFF), Color(0x06FFFFFF), Color(0x00FFFFFF)],
+    stops: [0.0, 0.25, 0.6],
   );
+
+  // Refração de borda de vidro polido arredondado: luz mais forte no canto
+  // superior-esquerdo, desaparece no meio, e um leve ciano (cor ambiente)
+  // refrata no canto inferior-direito — como um bloco de vidro real sob luz.
+  static const LinearGradient glassRefractionBorder = LinearGradient(
+    begin: Alignment(-1.0, -1.0),
+    end: Alignment(1.0, 1.0),
+    colors: [
+      Color(0x88FFFFFF), // brilho de borda topo-esquerda
+      Color(0x1AFFFFFF),
+      Color(0x00FFFFFF),
+      Color(0x1400E5FF), // ciano ambiente refratado na base-direita
+      Color(0x3D00E5FF),
+    ],
+    stops: [0.0, 0.18, 0.45, 0.8, 1.0],
+  );
+
+  // Refração INTERNA sutil (simula a distorção de luz através do vidro):
+  // um gradiente radial claro no canto superior-esquerdo, sobreposto ao blur.
+  static const RadialGradient glassInnerRefraction = RadialGradient(
+    center: Alignment(-0.8, -0.9),
+    radius: 1.1,
+    colors: [Color(0x1FFFFFFF), Color(0x00FFFFFF)],
+    stops: [0.0, 0.6],
+  );
+
+  // Sombra ambiente dos painéis de vidro: preta + leve halo ciano (refração).
+  static const List<BoxShadow> glassShadowRefraction = [
+    BoxShadow(
+      color: Color(0x66000000),
+      blurRadius: 30,
+      offset: Offset(0, 12),
+    ),
+    BoxShadow(
+      color: Color(0x1400E5FF),
+      blurRadius: 40,
+      spreadRadius: -4,
+      offset: Offset(0, 6),
+    ),
+  ];
 
   // Fundo ambiente: blob de cor suave (ciano-índigo) sobre preto, estilo visionOS.
   static const RadialGradient ambientGradient = RadialGradient(
@@ -310,41 +350,55 @@ class GlassContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = BorderRadius.circular(borderRadius);
+    // Borda interna ligeiramente menor para a borda de refração (1.5px).
+    final innerR = BorderRadius.circular(borderRadius - 1.5);
     return RepaintBoundary(
       child: Container(
         width: width,
         height: height,
         margin: margin,
+        // Camada 0 (mais externa): sombra + borda de refração de vidro polido.
+        // O gradiente na decoração simula luz refratada nas bordas
+        // arredondadas (brilho topo-esquerda, ciano ambiente base-direita).
         decoration: BoxDecoration(
           borderRadius: r,
-          boxShadow: boxShadow ?? AppTheme.glassShadow,
+          gradient: border == null ? AppTheme.glassRefractionBorder : null,
+          boxShadow: boxShadow ?? AppTheme.glassShadowRefraction,
         ),
+        padding: border == null ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
         child: ClipRRect(
-          borderRadius: r,
+          borderRadius: border == null ? innerR : r,
           clipBehavior: Clip.antiAlias,
+          // Camada 1: vidro FOSCO (blur real do fundo).
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
             child: Container(
               padding: padding,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: opacity),
-                borderRadius: r,
-                border: border ??
-                    Border.all(color: AppTheme.glassBorder, width: 1),
+                borderRadius: border == null ? innerR : r,
+                border: border,
               ),
               child: Stack(
                 children: [
+                  // Camada 2: refração interna sutil (distorção de luz).
+                  if (showSpecular)
+                    const Positioned.fill(
+                      child: DecoratedBox(
+                          decoration:
+                              BoxDecoration(gradient: AppTheme.glassInnerRefraction)),
+                    ),
+                  // Camada 3: brilho especular no topo (reflexo polido).
                   if (showSpecular)
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          borderRadius: r,
+                          borderRadius: border == null ? innerR : r,
                           gradient: AppTheme.glassSpecular,
                         ),
                       ),
                     ),
-                  // child NÃO posicionado: define o tamanho do Stack (senão
-                  // Positioned.fill causaria altura infinita em scroll).
+                  // child NÃO posicionado: define o tamanho do Stack.
                   child,
                 ],
               ),
