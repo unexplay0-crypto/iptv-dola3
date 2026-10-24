@@ -276,6 +276,70 @@ class AdaptiveInputField extends StatelessWidget {
   }
 }
 
+/// Campo de busca ADAPTATIVO (para telas de listagem: Filmes, Séries, TV).
+///
+///  - Na TV: [TextField] com `readOnly: true` — NUNCA abre o teclado nativo.
+///    Ao tocar/focar, chama [onTvTap] (o pai abre o [VirtualKeyboard] embutido
+///    no layout, abaixo do cabeçalho, para que campo + teclado fiquem sempre
+///    visíveis, sem sobreposição).
+///  - No celular: [TextField] editável normal — teclado nativo do sistema.
+class AdaptiveSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final VoidCallback? onTvTap;
+  final VoidCallback? onClear;
+  final bool showClear;
+  const AdaptiveSearchField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
+    this.onTvTap,
+    this.onClear,
+    this.showClear = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isTv = DeviceConfig.of(context).isTv;
+    return TextField(
+      controller: controller,
+      readOnly: isTv, // bloqueia teclado nativo na TV
+      showCursor: isTv,
+      onTap: isTv ? onTvTap : null,
+      onChanged: onChanged,
+      style: const TextStyle(
+          color: AppTheme.textPrimary, fontSize: 14, height: 1.3),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle:
+            const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+        prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted, size: 20),
+        suffixIcon: showClear
+            ? IconButton(
+                icon: const Icon(Icons.clear, color: AppTheme.textMuted, size: 18),
+                onPressed: onClear,
+              )
+            : (isTv
+                ? const Icon(Icons.keyboard_rounded,
+                    color: AppTheme.accent, size: 18)
+                : null),
+        filled: true,
+        fillColor: AppTheme.surface.withOpacity(0.8),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            borderSide: const BorderSide(color: AppTheme.accent, width: 1.5)),
+      ),
+    );
+  }
+}
+
 /// Wrapper que carrega flex para o Expanded da linha.
 class _FlexKey extends StatelessWidget {
   final int flex;

@@ -8,6 +8,7 @@ import '../../data/repositories/content_repository.dart';
 import '../../data/xtream_api_client.dart';
 import '../../widgets/tv_focusable_item.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/virtual_keyboard.dart';
 import '../player/player_screen.dart';
 
 /// Séries — pôsteres GRANDES (4 colunas) + sidebar de categorias/gêneros.
@@ -30,6 +31,7 @@ class _SeriesScreenState extends State<SeriesScreen>
   List<SeriesGroup> _allSeries = []; // cache em memória
   bool _loading = true;
   String _search = "";
+  bool _kbOpen = false; // teclado virtual embutido (apenas TV)
 
   @override
   bool get wantKeepAlive => true;
@@ -95,44 +97,31 @@ class _SeriesScreenState extends State<SeriesScreen>
               SizedBox(
                 width: cfg.searchWidth,
                 height: 44,
-                child: TextField(
+                child: AdaptiveSearchField(
                   controller: _searchCtrl,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: "Buscar série...",
-                    hintStyle: const TextStyle(
-                        color: AppTheme.textMuted, fontSize: 14),
-                    prefixIcon:
-                        const Icon(Icons.search, color: AppTheme.textMuted, size: 20),
-                    suffixIcon: _search.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear,
-                                color: AppTheme.textMuted, size: 18),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              setState(() => _search = "");
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: AppTheme.surface.withOpacity(0.8),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        borderSide: const BorderSide(
-                            color: AppTheme.accent, width: 1.5)),
-                  ),
+                  hint: "Buscar serie...",
+                  showClear: _search.isNotEmpty,
+                  onClear: () {
+                    _searchCtrl.clear();
+                    setState(() => _search = "");
+                  },
+                  onTvTap: () => setState(() => _kbOpen = !_kbOpen),
                   onChanged: (v) => setState(() => _search = v),
                 ),
               ),
             ],
           ),
         ),
+        // Teclado virtual embutido na TV (campo + teclado sempre visiveis).
+        if (cfg.isTv && _kbOpen)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: VirtualKeyboard(
+              controller: _searchCtrl,
+              onSubmit: () => setState(() => _kbOpen = false),
+              onClose: () => setState(() => _kbOpen = false),
+            ),
+          ),
         Expanded(
           child: Row(
             children: [
