@@ -41,7 +41,9 @@ class DeviceDetector {
 /// Configuração de dispositivo exposta para a árvore de widgets.
 class DeviceConfig extends InheritedWidget {
   final bool isTv;
-  final bool isPhone;
+
+  /// Verdadeiro em celular/tablet (oposto de isTv).
+  bool get isPhone => !isTv;
 
   /// Fator de escala para texto (via MediaQuery.textScaler).
   /// TV: 1.0 (10-foot UI). Celular: menor, conforme a menor largura.
@@ -123,7 +125,6 @@ class DeviceConfig extends InheritedWidget {
     }
     return DeviceConfig(
       isTv: isTv,
-      isPhone: !isTv,
       textScale: textScale,
       posterWidth: posterWidth,
       sideMenuWidth: sideMenuWidth,
