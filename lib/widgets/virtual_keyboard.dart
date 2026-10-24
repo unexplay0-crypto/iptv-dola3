@@ -5,9 +5,69 @@ import '../app_theme.dart';
 import '../core/device_config.dart';
 import 'tv_focusable_item.dart';
 
-/// Teclado QWERTY puro (sem contêiner), reaproveitável dentro de um diálogo
-/// estilo Fire TV ou embutido no layout. Estilo Gboard: fileira de números,
-/// três fileiras de letras com Shift, espaço largo, apagar, atalhos.
+// ============================================================================
+//  _Pressable — animação de toque moderna: a tecla "afunda" (scale 0.92) ao
+//  ser pressionada e volta com mola. Usado em cada tecla do teclado.
+// ============================================================================
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  const _Pressable({required this.child, this.onTap, this.onLongPress});
+
+  @override
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 90));
+  bool _down = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _setDown(bool v) {
+    if (_down == v) return;
+    setState(() => _down = v);
+    if (v) {
+      _ctrl.forward();
+    } else {
+      _ctrl.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _setDown(true),
+      onTapUp: (_) {
+        _setDown(false);
+        widget.onTap?.call();
+      },
+      onTapCancel: () => _setDown(false),
+      onLongPress: widget.onLongPress,
+      child: AnimatedScale(
+        scale: _down ? 0.90 : 1.0,
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// ============================================================================
+//  QwertyKeyboard — teclado completo estilo Gboard com:
+//   - Fileira de ATALHOS rápidos no topo (http://, https://, ://, :, /, ., @, www.)
+//   - Fileira de números + 3 fileiras de letras com Shift
+//   - Espaço largo, apagar (⌫) com repetição no longo, enter (✓), fechar (✕)
+//   - Cada tecla com animação de toque (_Pressable) + foco D-pad
+// ============================================================================
 class QwertyKeyboard extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback? onSubmit;
@@ -15,6 +75,7 @@ class QwertyKeyboard extends StatefulWidget {
   final bool obscureText;
   final double keyHeight;
   final double fontSize;
+  final Animation<double>? stagger; // animação de entrada escalonada
 
   const QwertyKeyboard({
     super.key,
@@ -24,6 +85,7 @@ class QwertyKeyboard extends StatefulWidget {
     this.obscureText = false,
     this.keyHeight = 52,
     this.fontSize = 18,
+    this.stagger,
   });
 
   @override
@@ -36,6 +98,8 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
   static const _rowQ = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"];
   static const _rowA = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
   static const _rowZ = ["z", "x", "c", "v", "b", "n", "m"];
+  // Atalhos rápidos (essenciais para digitar URLs de IPTV)
+  static const _shortcuts = ["http://", "https://", "://", ":", "/", ".", "@", "www."];
 
   String _c(String s) => _shift ? s.toUpperCase() : s;
 
@@ -48,7 +112,7 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
     widget.controller.text = newText;
     widget.controller.selection =
         TextSelection.collapsed(offset: start + s.length);
-    if (_shift) setState(() => _shift = false);
+    if (_shift && s.length == 1) setState(() => _shift = false);
   }
 
   void _backspace() {
@@ -62,6 +126,23 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
     widget.controller.selection = TextSelection.collapsed(offset: start - 1);
   }
 
+  Widget _staggered(int index, Widget child) {
+    if (widget.stagger == null) return child;
+    final anim = CurvedAnimation(
+      parent: widget.stagger!,
+      curve: Interval((index * 0.12).clamp(0.0, 0.6), 1.0,
+          curve: Curves.easeOutCubic),
+    );
+    return FadeTransition(
+      opacity: anim,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.18), end: Offset.zero)
+            .animate(anim),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final kh = widget.keyHeight;
@@ -69,53 +150,94 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _row(_rowNumbers.map((k) => _key(k, _c(k), kh, fs)).toList()),
-        const SizedBox(height: 8),
-        _row(_rowQ.map((k) => _key(k, _c(k), kh, fs)).toList()),
-        const SizedBox(height: 8),
-        _row(_rowA.map((k) => _key(k, _c(k), kh, fs)).toList()),
-        const SizedBox(height: 8),
-        _row([
-          _specialKey(
-            flex: 2,
-            label: "⇧",
-            active: _shift,
-            height: kh,
-            onTap: () => setState(() => _shift = !_shift),
+        // ===== Fileira de atalhos rápidos (chips horizontais) =====
+        _staggered(
+          0,
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemCount: _shortcuts.length,
+              itemBuilder: (_, i) {
+                final s = _shortcuts[i];
+                return _Pressable(
+                  onTap: () => _insert(s),
+                  child: TVFocusableItem(
+                    borderRadius: 19,
+                    focusScale: 1.05,
+                    onTap: () => _insert(s),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(19),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Text(s,
+                          style: const TextStyle(
+                              color: AppTheme.accent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-          ..._rowZ.map((k) => _key(k, _c(k), kh, fs)),
-          _specialKey(
-            flex: 2,
-            label: "⌫",
-            height: kh,
-            onTap: _backspace,
-            onLongPress: _backspace,
-          ),
-        ]),
+        ),
         const SizedBox(height: 8),
-        _row([
-          _specialKey(
-              flex: 3, label: "http://", height: kh, onTap: () => _insert("http://")),
-          _specialKey(flex: 1, label: ".", height: kh, onTap: () => _insert(".")),
-          _specialKey(flex: 1, label: "@", height: kh, onTap: () => _insert("@")),
-          _specialKey(flex: 4, label: "espaço", height: kh, onTap: () => _insert(" ")),
-          _specialKey(
+        _staggered(1, _row(_rowNumbers.map((k) => _key(k, _c(k), kh, fs)).toList(), kh)),
+        const SizedBox(height: 7),
+        _staggered(2, _row(_rowQ.map((k) => _key(k, _c(k), kh, fs)).toList(), kh)),
+        const SizedBox(height: 7),
+        _staggered(3, _row(_rowA.map((k) => _key(k, _c(k), kh, fs)).toList(), kh)),
+        const SizedBox(height: 7),
+        _staggered(
+          4,
+          _row([
+            _specialKey(
               flex: 2,
-              label: "✓",
+              label: "⇧",
+              active: _shift,
               height: kh,
-              accent: true,
-              onTap: widget.onSubmit ?? () {}),
-          _specialKey(
+              onTap: () => setState(() => _shift = !_shift),
+            ),
+            ..._rowZ.map((k) => _key(k, _c(k), kh, fs)),
+            _specialKey(
               flex: 2,
-              label: "✕",
+              label: "⌫",
               height: kh,
-              onTap: widget.onClose ?? () => Navigator.of(context).pop()),
-        ]),
+              onTap: _backspace,
+              onLongPress: _backspace,
+            ),
+          ], kh),
+        ),
+        const SizedBox(height: 7),
+        _staggered(
+          5,
+          _row([
+            _specialKey(flex: 2, label: "?123", height: kh, onTap: () {}),
+            _specialKey(flex: 3, label: "espaço", height: kh, onTap: () => _insert(" ")),
+            _specialKey(
+                flex: 2,
+                label: "✓",
+                height: kh,
+                accent: true,
+                onTap: widget.onSubmit ?? () {}),
+            _specialKey(
+                flex: 2,
+                label: "✕",
+                height: kh,
+                onTap: widget.onClose ?? () => Navigator.of(context).pop()),
+          ], kh),
+        ),
       ],
     );
   }
 
-  Widget _row(List<Widget> keys) {
+  Widget _row(List<Widget> keys, double h) {
     return Row(
       children: [
         for (var i = 0; i < keys.length; i++) ...[
@@ -129,23 +251,26 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
   Widget _key(String raw, String display, double h, double fs) {
     return _FlexKey(
       flex: 1,
-      child: TVFocusableItem(
-        borderRadius: 10,
-        focusScale: 1.08,
+      child: _Pressable(
         onTap: () => _insert(raw),
-        child: Container(
-          height: h,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withOpacity(0.14)),
+        child: TVFocusableItem(
+          borderRadius: 10,
+          focusScale: 1.08,
+          onTap: () => _insert(raw),
+          child: Container(
+            height: h,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withOpacity(0.14)),
+            ),
+            child: Text(display,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: fs,
+                    fontWeight: FontWeight.w600)),
           ),
-          child: Text(display,
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: fs,
-                  fontWeight: FontWeight.w600)),
         ),
       ),
     );
@@ -162,43 +287,46 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
   }) {
     return _FlexKey(
       flex: flex,
-      child: TVFocusableItem(
-        borderRadius: 10,
-        focusScale: 1.06,
+      child: _Pressable(
         onTap: onTap,
         onLongPress: onLongPress,
-        child: Container(
-          height: height,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: accent
-                ? AppTheme.accent.withOpacity(0.85)
-                : active
-                    ? AppTheme.accent.withOpacity(0.35)
-                    : Colors.white.withOpacity(0.07),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: accent
-                    ? AppTheme.accent
-                    : active
-                        ? AppTheme.accent
-                        : Colors.white.withOpacity(0.14)),
+        child: TVFocusableItem(
+          borderRadius: 10,
+          focusScale: 1.06,
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Container(
+            height: height,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: accent
+                  ? AppTheme.accent.withOpacity(0.85)
+                  : active
+                      ? AppTheme.accent.withOpacity(0.35)
+                      : Colors.white.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: accent
+                      ? AppTheme.accent
+                      : active
+                          ? AppTheme.accent
+                          : Colors.white.withOpacity(0.14)),
+            ),
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: accent ? Colors.black : active ? Colors.white : Colors.white70,
+                    fontSize: label.length > 3 ? 12 : 16,
+                    fontWeight: FontWeight.w700)),
           ),
-          child: Text(label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  color: accent ? Colors.black : active ? Colors.white : Colors.white70,
-                  fontSize: label.length > 3 ? 12 : 16,
-                  fontWeight: FontWeight.w700)),
         ),
       ),
     );
   }
 }
 
-/// Wrapper que carrega flex para o Expanded da linha.
 class _FlexKey extends StatelessWidget {
   final int flex;
   final Widget child;
@@ -208,11 +336,14 @@ class _FlexKey extends StatelessWidget {
 }
 
 // ============================================================================
-//  DIÁLOGO DE TECLADO ESTILO FIRE TV / GOOGLE TV
+//  TvKeyboardDialog — janela estilo Fire TV / Google TV.
 //  Ao selecionar um campo de texto, abre uma JANELA centralizada com:
-//   - preview do texto sendo digitado (com cursor piscante) no topo
-//   - teclado QWERTY completo abaixo
-//  Nunca toca no IME do sistema — 100% controle do app.
+//   - CAIXA DE TEXTO (preview) no topo: mostra exatamente o que está sendo
+//     digitado, com cursor piscante, botão limpar e contador. Tudo o que é
+//     escrito aqui é devolvido para o campo original.
+//   - Teclado QWERTY completo abaixo (atalhos + letras + espaço + apagar + shift).
+//  Animação moderna: entrada slide-up + fade + escala, e stagger fade-in de
+//  cada fileira do teclado.
 // ============================================================================
 class TvKeyboardDialog extends StatefulWidget {
   final String initialText;
@@ -230,7 +361,7 @@ class TvKeyboardDialog extends StatefulWidget {
     this.keyboardType,
   });
 
-  /// Abre o diálogo e retorna o texto final (ou null se cancelado).
+  /// Abre a janela e retorna o texto final (ou null se cancelado).
   static Future<String?> show(
     BuildContext context, {
     String initialText = "",
@@ -239,10 +370,29 @@ class TvKeyboardDialog extends StatefulWidget {
     bool obscureText = false,
     TextInputType? keyboardType,
   }) {
-    return showDialog<String>(
+    return showGeneralDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => TvKeyboardDialog(
+      barrierLabel: "keyboard",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 320),
+      transitionBuilder: (context, anim, secondaryAnim, child) {
+        final curved =
+            CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+                    begin: const Offset(0, 0.28), end: Offset.zero)
+                .animate(curved),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
+              child: child,
+            ),
+          ),
+        );
+      },
+      pageBuilder: (_, __, ___) => TvKeyboardDialog(
         initialText: initialText,
         label: label,
         hint: hint,
@@ -260,6 +410,7 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
     with SingleTickerProviderStateMixin {
   late final TextEditingController _ctrl;
   late final AnimationController _cursorAnim;
+  late final AnimationController _staggerCtrl;
 
   @override
   void initState() {
@@ -268,8 +419,11 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
     _cursorAnim = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 530))
       ..repeat(reverse: true);
+    _staggerCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
+      _staggerCtrl.forward();
     });
   }
 
@@ -277,6 +431,7 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
   void dispose() {
     _ctrl.dispose();
     _cursorAnim.dispose();
+    _staggerCtrl.dispose();
     super.dispose();
   }
 
@@ -286,7 +441,7 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
   @override
   Widget build(BuildContext context) {
     final isPhone = DeviceConfig.of(context).isPhone;
-    final dialogWidth = isPhone ? double.infinity : 680.0;
+    final dialogWidth = isPhone ? double.infinity : 720.0;
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
@@ -298,14 +453,14 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
           gradient: const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A2233), Color(0xFF0B0F18)],
+            colors: [Color(0xFF1B2436), Color(0xFF0B0F18)],
           ),
           border: Border.all(color: AppTheme.glassBorder),
           boxShadow: [
             const BoxShadow(
                 color: Colors.black54, blurRadius: 40, offset: Offset(0, 20)),
             BoxShadow(
-                color: AppTheme.accent.withOpacity(0.12),
+                color: AppTheme.accent.withOpacity(0.15),
                 blurRadius: 60,
                 spreadRadius: -10),
           ],
@@ -316,6 +471,7 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Cabeçalho
               Row(
                 children: [
                   Container(
@@ -323,6 +479,11 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
                     decoration: BoxDecoration(
                       gradient: AppTheme.accentGradient,
                       borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppTheme.accent.withOpacity(0.4),
+                            blurRadius: 10)
+                      ],
                     ),
                     child: const Icon(Icons.keyboard_rounded,
                         color: Colors.black, size: 20),
@@ -352,24 +513,27 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
                 ],
               ),
               const SizedBox(height: 16),
-              // ÁREA DE PREVIEW DO TEXTO (estilo Fire TV) — campo com
-              // cursor piscante, mostra exatamente o que está sendo digitado.
+              // ===== CAIXA DE TEXTO (preview) — visível simultaneamente com
+              // o teclado, exatamente como no Fire TV. Mostra o texto sendo
+              // digitado com cursor piscante. =====
               AnimatedBuilder(
                 animation: _cursorAnim,
                 builder: (context, _) {
                   final showCursor = _cursorAnim.value > 0.5;
-                  return Container(
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 16),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.45),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      border: Border.all(color: AppTheme.accent, width: 1.5),
+                      border: Border.all(
+                          color: AppTheme.accent.withOpacity(0.9), width: 1.5),
                       boxShadow: [
                         BoxShadow(
-                            color: AppTheme.accent.withOpacity(0.2),
-                            blurRadius: 16)
+                            color: AppTheme.accent.withOpacity(0.25),
+                            blurRadius: 18)
                       ],
                     ),
                     child: Row(
@@ -406,7 +570,15 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
                                         child: Container(
                                           width: 2.5,
                                           height: 24,
-                                          color: AppTheme.accent,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.accent,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                  color: AppTheme.accent
+                                                      .withOpacity(0.8),
+                                                  blurRadius: 6)
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -434,7 +606,7 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
                   );
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Align(
                 alignment: Alignment.centerRight,
                 child: Text("${_ctrl.text.length} caracteres",
@@ -442,11 +614,13 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
                         color: AppTheme.textMuted, fontSize: 11)),
               ),
               const SizedBox(height: 14),
+              // Teclado com animação escalonada de entrada
               QwertyKeyboard(
                 controller: _ctrl,
                 obscureText: widget.obscureText,
-                keyHeight: isPhone ? 46 : 52,
-                fontSize: isPhone ? 16 : 18,
+                keyHeight: isPhone ? 44 : 50,
+                fontSize: isPhone ? 15 : 17,
+                stagger: _staggerCtrl.view,
                 onSubmit: () => Navigator.of(context).pop(_ctrl.text.trim()),
                 onClose: () => Navigator.of(context).pop(),
               ),
@@ -469,7 +643,7 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog>
 }
 
 // ============================================================================
-//  Campos adaptativos: na TV abrem o diálogo de teclado do app; no celular
+//  Campos adaptativos: na TV abrem a janela de teclado do app; no celular
 //  usam TextField nativo com o IME do sistema.
 // ============================================================================
 
