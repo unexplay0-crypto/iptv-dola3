@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
-import '../../core/device_config.dart';
 import '../../core/storage.dart';
 import '../../core/models.dart';
 import '../../data/repositories/content_repository.dart';

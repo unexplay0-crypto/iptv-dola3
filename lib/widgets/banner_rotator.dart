@@ -182,7 +182,6 @@ class _BannerCard extends StatelessWidget {
                     child: FastImage(
                       url: poster,
                       fit: BoxFit.contain, // proporção original, sem distorção
-                      alignment: Alignment.centerRight,
                       errorWidget: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),

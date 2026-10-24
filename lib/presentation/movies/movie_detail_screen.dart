@@ -150,7 +150,7 @@ class MovieDetailScreen extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppTheme.radiusPoster),
       child: hasPoster
           ? FastImage(
-              url: posterUrl!,
+              url: posterUrl,
               width: posterWidth,
               height: posterWidth * 1.5,
               fit: BoxFit.cover,
@@ -168,7 +168,7 @@ class MovieDetailScreen extends StatelessWidget {
           // Fundo desfocado (estilo Google TV): pôster em tela cheia + blur.
           if (hasPoster)
             FastImage(
-              url: posterUrl!,
+              url: posterUrl,
               fit: BoxFit.cover,
               httpHeaders: movie.headers.isEmpty ? null : movie.headers,
               errorWidget: (_, __, ___) => const SizedBox.shrink(),
