@@ -110,11 +110,10 @@ class _OptimizedHttpOverrides extends HttpOverrides {
     return super.createHttpClient(context)
       ..idleTimeout = const Duration(seconds: 30)
       ..maxConnectionsPerHost = 16
-      ..connectionTimeout = const Duration(seconds: 10)
-      // RECEIVE timeout: se o servidor aceitar a conexão mas nunca enviar
-      // dados (comum em IPTV sobrecarregado), a requisição falha em 8s em
-      // vez de travar para sempre — liberando o pool de conexões para as
-      // demais miniaturas (antes: imagens "nunca carregavam").
-      ..receiveTimeout = const Duration(seconds: 8);
+      ..connectionTimeout = const Duration(seconds: 10);
+    // idleTimeout=30s já libera conexões onde o servidor aceitou mas nunca
+    // envia dados — antes, 8 conexões travadas bloqueavam todas as demais
+    // miniaturas do mesmo host ("nunca carregavam"). maxConnectionsPerHost
+    // subiu de 8 para 16 para grades densas.
   }
 }
