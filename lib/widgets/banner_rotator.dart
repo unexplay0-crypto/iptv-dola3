@@ -1,18 +1,35 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../app_theme.dart';
 import '../core/models.dart';
 import '../data/tmdb_service.dart';
+import '../widgets/fast_image.dart';
 import 'tv_focusable_item.dart';
 
-/// Banner rotativo de destaque com backdrop do TMDB.
-/// Usa gradientes sobrepostos para camuflar defeitos de imagens de baixa
-/// qualidade e garantir legibilidade do texto. Aceita itens enriquecidos
-/// ({item: MediaItem, tmdb: TmdbInfo?}).
+/// Banner de recomendação JÁ RESOLVIDO contra o catálogo local.
+/// Garantia: o conteúdo sempre existe no catálogo conectado.
+class ResolvedBanner {
+  final String kind; // "movie" ou "series"
+  final MediaItem? movie; // definido se kind == "movie"
+  final SeriesGroup? series; // definido se kind == "series"
+  final TmdbInfo? tmdb; // metadados (backdrop, sinopse, ano, nota)
+  final String displayName;
+  const ResolvedBanner({
+    required this.kind,
+    required this.displayName,
+    this.movie,
+    this.series,
+    this.tmdb,
+  });
+}
+
+/// Banner rotativo de destaque com visual "liquid glass".
+/// O painel de informações sobre o backdrop usa blur real (BackdropFilter)
+/// com preenchimento translúcido e borda clara — estilo tvOS/visionOS.
 class BannerRotator extends StatefulWidget {
-  final List<Map<String, dynamic>> items; // {"item": MediaItem, "tmdb": TmdbInfo?}
-  final void Function(MediaItem) onSelect;
+  final List<ResolvedBanner> items;
+  final void Function(ResolvedBanner) onSelect;
   const BannerRotator({super.key, required this.items, required this.onSelect});
 
   @override
@@ -63,11 +80,10 @@ class _BannerRotatorState extends State<BannerRotator> {
                 style: TextStyle(color: AppTheme.textSecondary))),
       );
     }
-
     return Column(
       children: [
         SizedBox(
-          height: 280,
+          height: 300,
           child: PageView.builder(
             controller: _ctrl,
             itemCount: widget.items.length,
@@ -80,7 +96,6 @@ class _BannerRotatorState extends State<BannerRotator> {
           ),
         ),
         const SizedBox(height: 10),
-        // Indicadores de página
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(widget.items.length, (i) {
@@ -103,35 +118,36 @@ class _BannerRotatorState extends State<BannerRotator> {
 }
 
 class _BannerCard extends StatelessWidget {
-  final Map<String, dynamic> data;
-  final void Function(MediaItem) onSelect;
+  final ResolvedBanner data;
+  final void Function(ResolvedBanner) onSelect;
   final bool autofocus;
   const _BannerCard(
       {required this.data, required this.onSelect, this.autofocus = false});
 
   @override
   Widget build(BuildContext context) {
-    final item = data["item"] as MediaItem;
-    final tmdb = data["tmdb"] as TmdbInfo?;
+    final tmdb = data.tmdb;
     final backdrop = tmdb?.backdropUrl;
-    final title = tmdb?.title ?? item.name;
+    final poster = tmdb?.posterUrl;
+    final title = tmdb?.title ?? data.displayName;
     final overview = tmdb?.overview;
     final year = tmdb?.year;
     final rating = tmdb?.rating;
+    final quality = data.movie?.quality;
 
     return TVFocusableItem(
       autofocus: autofocus,
       borderRadius: AppTheme.radiusLg,
       focusScale: 1.01,
-      onTap: () => onSelect(item),
+      onTap: () => onSelect(data),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              color: Colors.black.withValues(alpha: 0.5),
+              blurRadius: 28,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -139,184 +155,195 @@ class _BannerCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Fundo sólido (camufla bordas / falhas da imagem)
             Container(color: AppTheme.surface),
-            // Imagem de fundo: backdrop TMDB (preferido) ou logo do item
+            // Backdrop TMDB (preferido) ou logo do item
             if (backdrop != null && backdrop.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: backdrop,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => _fallbackImage(item),
-              )
+              FastImage(url: backdrop, fit: BoxFit.cover)
+            else if (data.movie?.logo != null)
+              FastImage(url: data.movie!.logo!, fit: BoxFit.cover)
+            else if (data.series?.logo != null)
+              FastImage(url: data.series!.logo!, fit: BoxFit.cover)
             else
-              _fallbackImage(item),
-            // Gradiente sobreposto ESQUERDA → DIREITA (escurece para texto)
+              const DecoratedBox(
+                  decoration: BoxDecoration(gradient: AppTheme.ambientGradient)),
+            // Escurecimento para legibilidade
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
-                    Color(0xDD0A0F1A),
-                    Color(0x880A0F1A),
-                    Color(0x220A0F1A),
+                    Color(0xE605070D),
+                    Color(0x9905070D),
+                    Color(0x3305070D),
                     Colors.transparent,
                   ],
                   stops: [0.0, 0.35, 0.65, 1.0],
                 ),
               ),
             ),
-            // Gradiente sobreposto INFERIOR (escurece base para legibilidade)
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Color(0xCC0A0F1A), Colors.transparent],
+                  colors: [Color(0xCC05070D), Colors.transparent],
                   stops: [0.0, 0.5],
                 ),
               ),
             ),
-            // Conteúdo textual
+            // Painel de informações em VIDRO (liquid glass) — blur real
             Positioned(
-              left: 28,
-              right: 260,
-              bottom: 24,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Badge EM DESTAQUE
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              left: 24,
+              bottom: 22,
+              right: 240,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: AppTheme.accentGradient,
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.accent.withValues(alpha: 0.4),
-                          blurRadius: 10,
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                      border: Border.all(color: AppTheme.glassBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Badge: tipo + "EM DESTAQUE"
+                        Row(children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.accentGradient,
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: AppTheme.accent.withValues(alpha: 0.4),
+                                    blurRadius: 10),
+                              ],
+                            ),
+                            child: const Text(
+                              "EM DESTAQUE",
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.black,
+                                  letterSpacing: 1.2),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: Text(
+                              data.kind == "series" ? "SÉRIE" : "FILME",
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white70,
+                                  letterSpacing: 0.8),
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 10),
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1.15,
+                            shadows: [
+                              Shadow(
+                                  color: Colors.black54,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2))
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                    child: const Text(
-                      "EM DESTAQUE",
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black,
-                          letterSpacing: 1.2),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Título
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.15,
-                      shadows: [
-                        Shadow(
-                            color: Colors.black54,
-                            blurRadius: 8,
-                            offset: Offset(0, 2))
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Ano + avaliação
-                  Row(
-                    children: [
-                      if (year != null && year.isNotEmpty)
-                        Text(year,
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          if (year != null && year.isNotEmpty)
+                            Text(year,
+                                style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
+                          if (rating != null && rating > 0) ...[
+                            if (year != null && year.isNotEmpty)
+                              const SizedBox(width: 14),
+                            const Icon(Icons.star, color: AppTheme.gold, size: 15),
+                            const SizedBox(width: 4),
+                            Text(rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                    color: AppTheme.gold,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                          if (quality != null && quality.isNotEmpty) ...[
+                            const SizedBox(width: 14),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.white30),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(quality,
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ]),
+                        if (overview != null && overview.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            overview,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 color: Colors.white70,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600)),
-                      if (rating != null && rating > 0) ...[
-                        if (year != null && year.isNotEmpty)
-                          const SizedBox(width: 14),
-                        const Icon(Icons.star,
-                            color: AppTheme.gold, size: 16),
-                        const SizedBox(width: 4),
-                        Text(rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                                color: AppTheme.gold,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700)),
-                      ],
-                      if (item.quality != null) ...[
-                        const SizedBox(width: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white30),
-                            borderRadius: BorderRadius.circular(4),
+                                fontSize: 12,
+                                height: 1.35),
                           ),
-                          child: Text(item.quality!,
-                              style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700)),
-                        ),
+                        ],
                       ],
-                    ],
-                  ),
-                  if (overview != null && overview.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      overview,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          height: 1.35),
                     ),
-                  ],
-                ],
+                  ),
+                ),
               ),
             ),
-            // Pôster à direita (se disponível) — adiciona profundidade
-            if (tmdb?.hasPoster ?? false)
+            // Pôster à direita (profundidade)
+            if (poster != null && poster.isNotEmpty)
               Positioned(
-                right: 24,
-                top: 24,
-                bottom: 24,
-                width: 170,
+                right: 22,
+                top: 22,
+                bottom: 22,
+                width: 160,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: tmdb!.posterUrl!,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                  ),
+                  child: FastImage(
+                      url: poster,
+                      fit: BoxFit.cover,
+                      errorWidget: const SizedBox.shrink()),
                 ),
               ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _fallbackImage(MediaItem item) {
-    if (item.logo != null && item.logo!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: item.logo!,
-        fit: BoxFit.cover,
-        errorWidget: (_, __, ___) => Container(color: AppTheme.surface),
-      );
-    }
-    return Container(
-      decoration: const BoxDecoration(gradient: AppTheme.ambientGradient),
-      child: const Center(
-          child: Icon(Icons.movie_rounded,
-              size: 64, color: AppTheme.textMuted)),
     );
   }
 }

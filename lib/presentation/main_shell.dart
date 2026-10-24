@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_theme.dart';
@@ -150,20 +151,34 @@ class _MainShellState extends State<MainShell> {
                     curve: Curves.easeOutCubic,
                     width: menuWidth,
                     margin: const EdgeInsets.only(right: 16),
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      color: AppTheme.surface.withValues(alpha: 0.55),
+                      color: Colors.white.withValues(alpha: 0.07),
                       borderRadius:
                           BorderRadius.circular(AppTheme.radiusXl),
                       border: Border.all(color: AppTheme.glassBorder),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
+                      boxShadow: AppTheme.glassShadow,
                     ),
-                    child: Column(
+                    child: Stack(
+                      children: [
+                        // Vidro fosco: blur real do fundo (painel fixo)
+                        Positioned.fill(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                            child: const SizedBox.shrink(),
+                          ),
+                        ),
+                        // Brilho especular no topo (reflexo de luz)
+                        const Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(AppTheme.radiusXl)),
+                              gradient: AppTheme.glassSpecular,
+                            ),
+                          ),
+                        ),
+                        Column(
                       children: [
                         // Logo
                         Padding(
@@ -419,6 +434,8 @@ class _MainShellState extends State<MainShell> {
                                   ),
                           ),
                         ),
+                      ],
+                    ),
                       ],
                     ),
                   ),

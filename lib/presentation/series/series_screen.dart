@@ -1,5 +1,5 @@
+import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../app_theme.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
@@ -228,8 +228,8 @@ class _SeriesScreenState extends State<SeriesScreen>
                                 fit: StackFit.expand,
                                 children: [
                                   s.logo != null && s.logo!.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: s.logo!,
+                                      ? FastImage(
+                                          url: s.logo!,
                                           fit: BoxFit.cover,
                                           errorWidget: (_, __, ___) => const Center(
                                               child: Icon(Icons.tv_rounded,
@@ -376,8 +376,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     widget.series.logo!.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: CachedNetworkImage(
-                        imageUrl: widget.series.logo!,
+                    child: FastImage(
+                        url: widget.series.logo!,
                         width: 56,
                         height: 80,
                         fit: BoxFit.cover),

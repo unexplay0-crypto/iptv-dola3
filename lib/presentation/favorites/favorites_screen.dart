@@ -1,5 +1,5 @@
+import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../app_theme.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
@@ -87,8 +87,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                     fit: StackFit.expand,
                     children: [
                       item.logo != null && item.logo!.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: item.logo!,
+                          ? FastImage(
+                              url: item.logo!,
                               fit: isVod ? BoxFit.cover : BoxFit.contain,
                               errorWidget: (_, __, ___) => const Center(
                                   child: Icon(Icons.star,

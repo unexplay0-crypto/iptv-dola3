@@ -1,5 +1,5 @@
+import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../app_theme.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
@@ -265,8 +265,8 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                                       clipBehavior: Clip.antiAlias,
                                       child: ch.logo != null &&
                                               ch.logo!.isNotEmpty
-                                          ? CachedNetworkImage(
-                                              imageUrl: ch.logo!,
+                                          ? FastImage(
+                                              url: ch.logo!,
                                               fit: BoxFit.contain,
                                               errorWidget: (_, __, ___) =>
                                                   const Icon(

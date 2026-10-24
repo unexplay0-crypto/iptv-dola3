@@ -1,5 +1,5 @@
+import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../app_theme.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
@@ -238,8 +238,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                                 children: [
                                   // Pôster em tamanho grande
                                   m.logo != null && m.logo!.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: m.logo!,
+                                      ? FastImage(
+                                          url: m.logo!,
                                           fit: BoxFit.cover,
                                           errorWidget: (_, __, ___) =>
                                               const Center(
