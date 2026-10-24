@@ -8,7 +8,6 @@ import '../../data/repositories/content_repository.dart';
 import '../../widgets/tv_focusable_item.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/virtual_keyboard.dart';
-import '../player/player_screen.dart';
 import 'movie_detail_screen.dart';
 
 /// Filmes — pôsteres GRANDES (4 colunas, proporção 2:3).

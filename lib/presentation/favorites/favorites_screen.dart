@@ -6,7 +6,6 @@ import '../../core/models.dart';
 import '../../core/storage.dart';
 import '../../data/repositories/content_repository.dart';
 import '../../widgets/tv_focusable_item.dart';
-import '../player/player_screen.dart';
 import '../movies/movie_detail_screen.dart';
 
 /// Favoritos — grid de pôsteres grandes (4 colunas).
