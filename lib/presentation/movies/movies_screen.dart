@@ -8,6 +8,7 @@ import '../../data/repositories/content_repository.dart';
 import '../../widgets/tv_focusable_item.dart';
 import '../../widgets/skeleton.dart';
 import '../player/player_screen.dart';
+import 'movie_detail_screen.dart';
 
 /// Filmes — pôsteres GRANDES (4 colunas, proporção 2:3).
 /// Performance: catálogo carregado uma vez em memória; troca de categoria
@@ -222,7 +223,7 @@ class _MoviesScreenState extends State<MoviesScreen>
                             borderRadius: AppTheme.radiusPoster,
                             onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
-                                    builder: (_) => PlayerScreen(item: m))),
+                                    builder: (_) => MovieDetailScreen(movie: m))),
                             onLongPress: () {
                               AppStorage.instance.toggleFavorite(m.id);
                               setState(() {});

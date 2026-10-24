@@ -21,6 +21,10 @@ class SharedStreamEngine {
   VideoPlayerController? get controller => controllerNotifier.value;
   MediaItem? currentItem;
   bool _reconnecting = false;
+  // Flag que impede reconexão automática após o usuário fechar o player —
+  // antes, o loop de reconexão criava um novo controller e dava play() mesmo
+  // com o player fechado → áudio continuava em segundo plano.
+  bool _closed = true;
 
   static const _userAgents = [
     "IPTVSmartersPlayer",
@@ -39,6 +43,7 @@ class SharedStreamEngine {
 
   Future<VideoPlayerController> open(MediaItem item) async {
     await disposeCurrent();
+    _closed = false;
     currentItem = item;
     final cleanUrl = normalizeUrl(item.url);
     if (cleanUrl.isEmpty) {
@@ -94,17 +99,26 @@ class SharedStreamEngine {
       Map<String, String> headers) {
     if (item.type != ContentType.live) return;
     c.addListener(() async {
-      if (c.value.hasError && !_reconnecting) {
+      if (c.value.hasError && !_reconnecting && !_closed) {
         _reconnecting = true;
         final delays = [1, 2, 4, 8];
         for (var i = 0; i < delays.length; i++) {
           await Future.delayed(Duration(seconds: delays[i]));
+          if (_closed) {
+            _reconnecting = false;
+            return; // usuário fechou o player — NÃO reconecta (evita áudio de fundo)
+          }
           try {
             final nc = VideoPlayerController.networkUrl(
               Uri.parse(url),
               httpHeaders: headers,
             );
             await nc.initialize().timeout(const Duration(seconds: 10));
+            if (_closed) {
+              await nc.dispose();
+              _reconnecting = false;
+              return;
+            }
             try {
               await c.dispose();
             } catch (_) {}
@@ -120,6 +134,11 @@ class SharedStreamEngine {
   }
 
   Future<void> disposeCurrent() async {
+    _closed = true; // impede que a reconexão automática dê play de novo
+    _reconnecting = false;
+    try {
+      await controllerNotifier.value?.pause();
+    } catch (_) {}
     try {
       await controllerNotifier.value?.dispose();
     } catch (_) {}

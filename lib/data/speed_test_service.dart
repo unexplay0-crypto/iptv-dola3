@@ -14,24 +14,48 @@ class SpeedTestResult {
     this.reachable = true,
   });
 
+  /// Classificação da qualidade de vídeo recomendada para a velocidade medida.
+  String get qualityRecommendation {
+    if (!reachable || downloadMbps < 1.5) {
+      return "SD (480p) — conexão muito lenta";
+    }
+    if (downloadMbps < 4) return "SD (480p) — recomendado para evitar travamentos";
+    if (downloadMbps < 8) return "HD (720p) — qualidade boa para esta internet";
+    if (downloadMbps < 16) return "Full HD (1080p) — ideal para esta velocidade";
+    if (downloadMbps < 35) return "Full HD (1080p) — 4K pode travar no horário de pico";
+    return "4K (2160p) — excelente conexão, qualidade máxima recomendada";
+  }
+
   String get classification {
     if (!reachable) return "Servidor inacessível";
-    if (downloadMbps < 3) return "Ruim (SD)";
-    if (downloadMbps < 8) return "Razoável (HD)";
-    if (downloadMbps < 25) return "Boa (FHD)";
-    return "Excelente (4K)";
+    if (downloadMbps < 3) return "Ruim";
+    if (downloadMbps < 8) return "Razoável";
+    if (downloadMbps < 25) return "Boa";
+    if (downloadMbps < 50) return "Muito Boa";
+    return "Excelente";
   }
 }
 
-/// Teste de velocidade: ping + download contra o DNS do usuário.
-/// Não usa credenciais falsas (evita bloqueio por brute-force no provedor).
+/// Teste de velocidade estilo fast.com / speedtest.net.
+///
+/// Mede ping (latência) e velocidade de DOWNLOAD real baixando um arquivo
+/// grande de um CDN público (Cloudflare — mesmo tipo de endpoint usado por
+/// fast.com e speedtest). Reporta progresso em Mbps em tempo real via
+/// [onProgress] e, ao final, recomenda a qualidade de imagem ideal.
 class SpeedTestService {
-  static Future<SpeedTestResult> run(String dns,
-      {void Function(double mbps)? onProgress}) async {
-    final base = dns.endsWith("/") ? dns.substring(0, dns.length - 1) : dns;
+  // Endpoint público de download de teste (Cloudflare, global, confiável).
+  // ?bytes=N força o download de N bytes (sempre o mesmo conteúdo, rápido).
+  static const _downloadUrl =
+      "https://speed.cloudflare.com/__down?bytes=30000000"; // 30 MB
+  static const _pingUrl = "https://speed.cloudflare.com/__down?bytes=0";
+
+  static Future<SpeedTestResult> run(
+    String? dns, {
+    void Function(double mbps)? onProgress,
+  }) async {
     final stopwatch = Stopwatch();
 
-    // Ping (3 amostras via HEAD — sem credenciais)
+    // ---- 1. Ping / latência (3 amostras contra o CDN público) ----
     final pings = <double>[];
     var reachable = false;
     for (var i = 0; i < 3; i++) {
@@ -39,15 +63,21 @@ class SpeedTestService {
       stopwatch.start();
       try {
         final resp = await http
-            .head(Uri.parse(base))
-            .timeout(const Duration(seconds: 5));
+            .get(Uri.parse(_pingUrl))
+            .timeout(const Duration(seconds: 6));
         if (resp.statusCode < 500) reachable = true;
       } catch (_) {
+        // fallback: testa o próprio DNS do usuário (servidor IPTV)
         try {
-          final resp = await http
-              .get(Uri.parse(base))
-              .timeout(const Duration(seconds: 5));
-          if (resp.statusCode < 500) reachable = true;
+          final base = (dns ?? "").endsWith("/")
+              ? (dns ?? "").substring(0, (dns ?? "").length - 1)
+              : (dns ?? "");
+          if (base.isNotEmpty) {
+            final resp = await http
+                .head(Uri.parse(base))
+                .timeout(const Duration(seconds: 5));
+            if (resp.statusCode < 500) reachable = true;
+          }
         } catch (_) {}
       }
       stopwatch.stop();
@@ -69,26 +99,29 @@ class SpeedTestService {
           pingMs: ping, jitterMs: jitter, downloadMbps: 0, reachable: false);
     }
 
-    // Download: lê bytes do servidor por até 8s (endpoint raiz, sem credenciais)
+    // ---- 2. Download real (estilo fast.com): lê bytes por até 10s ----
     double totalBytes = 0;
     stopwatch.reset();
     stopwatch.start();
     try {
       final client = http.Client();
-      final resp = await client.send(http.Request("GET", Uri.parse(base)));
+      final resp = await client
+          .send(http.Request("GET", Uri.parse(_downloadUrl)))
+          .timeout(const Duration(seconds: 12));
       await for (final chunk in resp.stream) {
         totalBytes += chunk.length;
         final elapsed = stopwatch.elapsedMilliseconds / 1000;
-        if (elapsed > 0.5) {
+        if (elapsed > 0.3) {
           onProgress?.call((totalBytes * 8 / 1e6) / elapsed);
         }
-        if (stopwatch.elapsed.inSeconds > 8 || totalBytes > 50 * 1024 * 1024) {
+        // Para após 10s ou 50MB (o suficiente para medir com precisão).
+        if (stopwatch.elapsed.inSeconds > 10 || totalBytes > 50 * 1024 * 1024) {
           break;
         }
       }
       client.close();
     } catch (_) {
-      // servidor parou de responder durante o download — usa o que já mediu
+      // CDN parou — usa o que já foi medido.
     }
     stopwatch.stop();
     final elapsedSec = max(stopwatch.elapsedMilliseconds / 1000, 0.1);

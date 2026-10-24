@@ -7,6 +7,7 @@ import '../../core/storage.dart';
 import '../../data/repositories/content_repository.dart';
 import '../../widgets/tv_focusable_item.dart';
 import '../player/player_screen.dart';
+import '../movies/movie_detail_screen.dart';
 
 /// Favoritos — grid de pôsteres grandes (4 colunas).
 class FavoritesScreen extends StatefulWidget {
@@ -72,7 +73,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                 autofocus: i == 0,
                 borderRadius: AppTheme.radiusPoster,
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => PlayerScreen(item: item))),
+                    builder: (_) => MovieDetailScreen(movie: item))),
                 onLongPress: () {
                   AppStorage.instance.toggleFavorite(item.id);
                   _load();
