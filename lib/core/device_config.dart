@@ -62,6 +62,9 @@ class DeviceConfig extends InheritedWidget {
   /// Espaçamento base entre cards (dp).
   final double cardSpacing;
 
+  /// Margem de segurança (overscan) em dp. TV: 24 (borda da TV). Celular: ~8.
+  final double overscan;
+
   const DeviceConfig({
     super.key,
     required this.isTv,
@@ -70,6 +73,7 @@ class DeviceConfig extends InheritedWidget {
     required this.sideMenuWidth,
     required this.searchWidth,
     required this.cardSpacing,
+    required this.overscan,
     required super.child,
   }) : assert(textScale > 0);
 
@@ -87,41 +91,42 @@ class DeviceConfig extends InheritedWidget {
     double sideMenuWidth;
     double searchWidth;
     double cardSpacing;
+    double overscan;
     if (isTv) {
-      // TV: 10-foot UI — tamanhos generosos.
       textScale = 1.0;
       posterWidth = 168;
       sideMenuWidth = 210;
       searchWidth = 320;
       cardSpacing = 16;
+      overscan = 24;
+    } else if (shortest < 340) {
+      textScale = 0.74;
+      posterWidth = 104;
+      sideMenuWidth = 150;
+      searchWidth = 180;
+      cardSpacing = 10;
+      overscan = 8;
+    } else if (shortest < 380) {
+      textScale = 0.80;
+      posterWidth = 112;
+      sideMenuWidth = 165;
+      searchWidth = 200;
+      cardSpacing = 11;
+      overscan = 8;
+    } else if (shortest < 420) {
+      textScale = 0.86;
+      posterWidth = 122;
+      sideMenuWidth = 180;
+      searchWidth = 220;
+      cardSpacing = 12;
+      overscan = 10;
     } else {
-      // Celular: escala proporcional à menor largura.
-      if (shortest < 340) {
-        textScale = 0.74;
-        posterWidth = 104;
-        sideMenuWidth = 150;
-        searchWidth = 180;
-        cardSpacing = 10;
-      } else if (shortest < 380) {
-        textScale = 0.80;
-        posterWidth = 112;
-        sideMenuWidth = 165;
-        searchWidth = 200;
-        cardSpacing = 11;
-      } else if (shortest < 420) {
-        textScale = 0.86;
-        posterWidth = 122;
-        sideMenuWidth = 180;
-        searchWidth = 220;
-        cardSpacing = 12;
-      } else {
-        // Tablets grandes / celulares grandes.
-        textScale = 0.92;
-        posterWidth = 134;
-        sideMenuWidth = 195;
-        searchWidth = 250;
-        cardSpacing = 14;
-      }
+      textScale = 0.92;
+      posterWidth = 134;
+      sideMenuWidth = 195;
+      searchWidth = 250;
+      cardSpacing = 14;
+      overscan = 12;
     }
     return DeviceConfig(
       isTv: isTv,
@@ -130,6 +135,7 @@ class DeviceConfig extends InheritedWidget {
       sideMenuWidth: sideMenuWidth,
       searchWidth: searchWidth,
       cardSpacing: cardSpacing,
+      overscan: overscan,
       child: child,
     );
   }

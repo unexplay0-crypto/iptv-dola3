@@ -67,8 +67,8 @@ class FastImage extends StatelessWidget {
       memCacheHeight: cacheH,
       maxWidthDiskCache: cacheW,
       maxHeightDiskCache: cacheH,
-      fadeInDuration: Duration.zero,
-      fadeOutDuration: Duration.zero,
+      fadeInDuration: const Duration(milliseconds: 150),
+      fadeOutDuration: const Duration(milliseconds: 100),
       useOldImageOnUrlChange: true,
       filterQuality: FilterQuality.low,
       placeholder: (_, __) => Container(color: AppTheme.skeleton),
@@ -109,7 +109,12 @@ class _OptimizedHttpOverrides extends HttpOverrides {
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
       ..idleTimeout = const Duration(seconds: 30)
-      ..maxConnectionsPerHost = 8
-      ..connectionTimeout = const Duration(seconds: 10);
+      ..maxConnectionsPerHost = 16
+      ..connectionTimeout = const Duration(seconds: 10)
+      // RECEIVE timeout: se o servidor aceitar a conexão mas nunca enviar
+      // dados (comum em IPTV sobrecarregado), a requisição falha em 8s em
+      // vez de travar para sempre — liberando o pool de conexões para as
+      // demais miniaturas (antes: imagens "nunca carregavam").
+      ..receiveTimeout = const Duration(seconds: 8);
   }
 }

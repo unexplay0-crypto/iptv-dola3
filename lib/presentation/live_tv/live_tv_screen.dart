@@ -269,6 +269,9 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                                           ? FastImage(
                                               url: ch.logo!,
                                               fit: BoxFit.contain,
+                                              httpHeaders: ch.headers.isEmpty
+                                                  ? null
+                                                  : ch.headers,
                                               errorWidget: (_, __, ___) =>
                                                   const Icon(
                                                       Icons.live_tv_rounded,

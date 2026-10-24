@@ -236,6 +236,11 @@ class AppTheme {
       highlightColor: accent.withOpacity(0.2),
       splashColor: accent.withOpacity(0.15),
       dividerColor: Colors.white10,
+      // Transições de tela fluidas (fade + leve slide para cima) — padrão
+      // "líquido e divertido" sem comprometer a velocidade.
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: _FluentPageTransitionsBuilder(),
+      }),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -405,6 +410,36 @@ class GlassContainer extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Transição de página fluida: fade + leve deslize vertical (de 6% para 0),
+/// curva easeOutCubic, ~280ms. Mais suave que o zoom padrão do Material.
+class _FluentPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _FluentPageTransitionsBuilder();
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.05),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
       ),
     );
   }

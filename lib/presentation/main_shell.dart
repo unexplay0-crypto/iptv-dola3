@@ -28,10 +28,17 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell>
+    with SingleTickerProviderStateMixin {
   int _index = 0;
   bool _menuCollapsed = false;
   DateTime? _lastBack;
+  // Animação escalonada (stagger) dos itens do menu — cada item entra com
+  // fade + slide sequencial, padrão fluido e divertido.
+  late final AnimationController _menuAnim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
 
   static const _tabs = [
     ("Início", Icons.home_outlined, Icons.home),
@@ -59,7 +66,14 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    _menuAnim.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkExpiry());
+  }
+
+  @override
+  void dispose() {
+    _menuAnim.dispose();
+    super.dispose();
   }
 
   /// Avisa sobre vencimento iminente (≤3 dias) com popup de 3 segundos.
@@ -83,13 +97,20 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _selectTab(int i) {
+    final wasCollapsed = _menuCollapsed;
     setState(() {
       _index = i;
       _menuCollapsed = _collapseFor.contains(i);
     });
+    // Re-dispara a animação escalonada quando o menu volta a abrir.
+    if (wasCollapsed && !_menuCollapsed) _menuAnim.forward(from: 0);
   }
 
-  void _toggleMenu() => setState(() => _menuCollapsed = !_menuCollapsed);
+  void _toggleMenu() {
+    final wasCollapsed = _menuCollapsed;
+    setState(() => _menuCollapsed = !_menuCollapsed);
+    if (wasCollapsed) _menuAnim.forward(from: 0);
+  }
 
   Future<bool> _onWillPop() async {
     // Se o menu está recolhido, o primeiro Voltar o reabre (não sai do app).
@@ -145,7 +166,7 @@ class _MainShellState extends State<MainShell> {
               const BoxDecoration(gradient: AppTheme.ambientGradient),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(AppTheme.overscan / 2),
+              padding: EdgeInsets.all(cfg.overscan / 2),
               child: Row(
                 children: [
                   // Menu lateral — glass, com largura animada
@@ -244,7 +265,21 @@ class _MainShellState extends State<MainShell> {
                             itemBuilder: (_, i) {
                               final (label, iconOff, iconOn) = _tabs[i];
                               final selected = i == _index;
-                              return TVFocusableItem(
+                              // Animação escalonada: cada item começa num
+                              // instante diferente (fade + slide da esquerda).
+                              final itemAnim = CurvedAnimation(
+                                parent: _menuAnim,
+                                curve: Interval((i / _tabs.length) * 0.5, 1.0,
+                                    curve: Curves.easeOutCubic),
+                              );
+                              return FadeTransition(
+                                opacity: itemAnim,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(-0.18, 0),
+                                    end: Offset.zero,
+                                  ).animate(itemAnim),
+                                  child: TVFocusableItem(
                                 autofocus: i == 0,
                                 borderRadius: AppTheme.radiusMd,
                                 onTap: () => _selectTab(i),
@@ -311,7 +346,7 @@ class _MainShellState extends State<MainShell> {
                                           ],
                                         ),
                                 ),
-                              );
+                              )));
                             },
                           ),
                         ),

@@ -99,7 +99,7 @@ class _MoviesScreenState extends State<MoviesScreen>
               ),
               const Spacer(),
               SizedBox(
-                width: 300,
+                width: cfg.searchWidth,
                 height: 44,
                 child: TextField(
                   controller: _searchCtrl,
@@ -144,8 +144,8 @@ class _MoviesScreenState extends State<MoviesScreen>
             children: [
               // Sidebar de categorias (glass)
               Container(
-                width: 220,
-                margin: const EdgeInsets.only(right: 14),
+                width: cfg.sideMenuWidth,
+                margin: EdgeInsets.only(right: cfg.cardSpacing),
                 decoration: BoxDecoration(
                   color: AppTheme.surface.withOpacity(0.55),
                   borderRadius: BorderRadius.circular(AppTheme.radiusLg),
@@ -243,6 +243,8 @@ class _MoviesScreenState extends State<MoviesScreen>
                                       ? FastImage(
                                           url: m.logo!,
                                           fit: BoxFit.cover,
+                                          httpHeaders:
+                                              m.headers.isEmpty ? null : m.headers,
                                           errorWidget: (_, __, ___) =>
                                               const Center(
                                                   child: Icon(

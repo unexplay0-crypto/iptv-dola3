@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../core/device_config.dart';
 import '../core/models.dart';
 import '../data/tmdb_service.dart';
 import '../widgets/fast_image.dart';
@@ -80,10 +81,11 @@ class _BannerRotatorState extends State<BannerRotator> {
                 style: TextStyle(color: AppTheme.textSecondary))),
       );
     }
+    final isPhone = DeviceConfig.of(context).isPhone;
     return Column(
       children: [
         SizedBox(
-          height: 300,
+          height: isPhone ? 200 : 300,
           child: PageView.builder(
             controller: _ctrl,
             itemCount: widget.items.length,
@@ -126,6 +128,7 @@ class _BannerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = DeviceConfig.of(context).isPhone;
     final tmdb = data.tmdb;
     final backdrop = tmdb?.backdropUrl;
     final poster = tmdb?.posterUrl;
@@ -192,11 +195,12 @@ class _BannerCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Painel de informações em VIDRO (liquid glass) — blur real
+            // Painel de informações em VIDRO (liquid glass) — blur real.
+            // No celular: painel de largura total (sem reserva para pôster).
             Positioned(
-              left: 24,
-              bottom: 22,
-              right: 240,
+              left: 16,
+              bottom: 16,
+              right: isPhone ? 16 : 240,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 child: BackdropFilter(
@@ -326,8 +330,9 @@ class _BannerCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Pôster à direita (profundidade)
-            if (poster != null && poster.isNotEmpty)
+            // Pôster à direita (profundidade) — apenas na TV/tablet.
+            // No celular ele ocuparia metade da tela e espremeria o texto.
+            if (!isPhone && poster != null && poster.isNotEmpty)
               Positioned(
                 right: 22,
                 top: 22,

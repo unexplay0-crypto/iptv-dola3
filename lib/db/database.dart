@@ -7,6 +7,10 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
   AppDatabase._();
   Database? _db;
+  /// Cache em memória do agrupamento de séries (evita reprocessar o banco
+  /// inteiro a cada banner da tela inicial — antes era N× allSeries()).
+  /// Invalidado em replaceAll / clearAll.
+  List<SeriesGroup>? _seriesCache;
 
   Future<Database> get db async {
     if (_db != null) return _db!;
@@ -72,6 +76,7 @@ class AppDatabase {
   }
 
   Future<void> replaceAll(List<MediaItem> items) async {
+    _seriesCache = null;
     final d = await db;
     await d.transaction((txn) async {
       await txn.delete("media");
@@ -85,6 +90,7 @@ class AppDatabase {
   }
 
   Future<void> clearAll() async {
+    _seriesCache = null;
     final d = await db;
     await d.delete("media");
   }
@@ -180,18 +186,20 @@ class AppDatabase {
   }
 
   /// Agrupa episódios por série → temporadas → episódios ordenados.
-  /// Fallback: se series_key for null, agrupa pelo nome normalizado.
+  /// Usa cache em memória (populado uma vez) — busca filtra em memória.
   Future<List<SeriesGroup>> allSeries({String? search}) async {
-    final where = StringBuffer("type = ?");
-    final args = <Object?>[ContentType.episode.name];
-    if (search != null && search.isNotEmpty) {
-      where.write(" AND name LIKE ?");
-      args.add("%$search%");
-    }
+    final cached = _seriesCache ??= await _computeAllSeries();
+    if (search == null || search.isEmpty) return cached;
+    final q = search.toLowerCase();
+    return cached.where((s) => s.name.toLowerCase().contains(q)).toList();
+  }
+
+  /// Computa o agrupamento completo a partir do banco (uma vez por sessão).
+  Future<List<SeriesGroup>> _computeAllSeries() async {
     final rows = await (await db).query(
       "media",
-      where: where.toString(),
-      whereArgs: args.isEmpty ? null : args,
+      where: "type = ?",
+      whereArgs: [ContentType.episode.name],
       orderBy: "series_key ASC, season ASC, episode ASC",
     );
 

@@ -48,7 +48,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             child: Row(children: [
-              Container(width: 60, height: 60, color: AppTheme.surface, child: item.logo != null ? FastImage(url: item.logo!, fit: BoxFit.cover) : const Icon(Icons.history, color: Colors.grey)),
+              Container(width: 60, height: 60, color: AppTheme.surface, child: item.logo != null ? FastImage(url: item.logo!, fit: BoxFit.cover, httpHeaders: item.headers.isEmpty ? null : item.headers) : const Icon(Icons.history, color: Colors.grey)),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),

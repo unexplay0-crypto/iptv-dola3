@@ -1,6 +1,7 @@
 import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../core/device_config.dart';
 import '../../core/models.dart';
 import '../../core/storage.dart';
 import '../../data/repositories/content_repository.dart';
@@ -47,6 +48,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               "Nenhum favorito ainda. Segure OK sobre um item para favoritar.",
               style: TextStyle(color: AppTheme.textSecondary)));
     }
+    final cfg = DeviceConfig.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -56,11 +58,11 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         ),
         Expanded(
           child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: cfg.posterWidth,
               childAspectRatio: 0.62,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              crossAxisSpacing: cfg.cardSpacing,
+              mainAxisSpacing: cfg.cardSpacing,
             ),
             itemCount: _items.length,
             itemBuilder: (_, i) {
@@ -90,6 +92,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                           ? FastImage(
                               url: item.logo!,
                               fit: isVod ? BoxFit.cover : BoxFit.contain,
+                              httpHeaders:
+                                  item.headers.isEmpty ? null : item.headers,
                               errorWidget: (_, __, ___) => const Center(
                                   child: Icon(Icons.star,
                                       size: 40, color: AppTheme.textMuted)),
