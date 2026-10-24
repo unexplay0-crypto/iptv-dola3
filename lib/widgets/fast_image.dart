@@ -29,7 +29,7 @@ class FastImage extends StatelessWidget {
   final double? height;
   final BoxFit fit;
   final Map<String, String>? httpHeaders;
-  final Widget? errorWidget;
+  final Widget Function(BuildContext, String, Object)? errorWidget;
   final BorderRadius? borderRadius;
 
   const FastImage({
@@ -72,13 +72,12 @@ class FastImage extends StatelessWidget {
       useOldImageOnUrlChange: true,
       filterQuality: FilterQuality.low,
       placeholder: (_, __) => Container(color: AppTheme.skeleton),
-      errorWidget: (_, __, ___) =>
-          errorWidget ??
-          Container(
-            color: AppTheme.surface,
-            child: const Icon(Icons.broken_image_outlined,
-                color: AppTheme.textMuted, size: 28),
-          ),
+      errorWidget: errorWidget ??
+          (_, __, ___) => Container(
+                color: AppTheme.surface,
+                child: const Icon(Icons.broken_image_outlined,
+                    color: AppTheme.textMuted, size: 28),
+              ),
     );
     if (borderRadius != null) {
       return ClipRRect(borderRadius: borderRadius!, child: img);

@@ -338,7 +338,7 @@ class _BannerCard extends StatelessWidget {
                   child: FastImage(
                       url: poster,
                       fit: BoxFit.cover,
-                      errorWidget: const SizedBox.shrink()),
+                      errorWidget: (_, __, ___) => const SizedBox.shrink()),
                 ),
               ),
           ],
