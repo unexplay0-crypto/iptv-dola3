@@ -1,3 +1,4 @@
+import 'dart:ui';
 import '../../widgets/fast_image.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
@@ -11,9 +12,7 @@ import '../../widgets/skeleton.dart';
 import '../../widgets/virtual_keyboard.dart';
 import '../player/player_screen.dart';
 
-/// Séries — pôsteres GRANDES (4 colunas) + sidebar de categorias/gêneros.
-/// Catálogo carregado uma vez em memória; troca de categoria e busca filtram
-/// em memória (sem recarregar, sem spinner).
+/// Séries — pôsteres GRANDES + sidebar de categorias.
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
 
@@ -25,13 +24,11 @@ class _SeriesScreenState extends State<SeriesScreen>
     with AutomaticKeepAliveClientMixin {
   final _repo = ContentRepository();
   final TextEditingController _searchCtrl = TextEditingController();
-
   List<String> _groups = [];
   String? _selectedGroup;
-  List<SeriesGroup> _allSeries = []; // cache em memória
+  List<SeriesGroup> _allSeries = [];
   bool _loading = true;
   String _search = "";
-  bool _kbOpen = false; // teclado virtual embutido (apenas TV)
 
   @override
   bool get wantKeepAlive => true;
@@ -67,10 +64,8 @@ class _SeriesScreenState extends State<SeriesScreen>
   Widget build(BuildContext context) {
     super.build(context);
     if (_loading) return const Center(child: SkeletonGrid());
-
     final cfg = DeviceConfig.of(context);
     final series = _filtered;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -86,8 +81,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                 decoration: BoxDecoration(
                   color: AppTheme.gold.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: AppTheme.gold.withOpacity(0.4)),
+                  border: Border.all(color: AppTheme.gold.withOpacity(0.4)),
                 ),
                 child: Text("${series.length} séries",
                     style: AppTheme.badge
@@ -105,27 +99,15 @@ class _SeriesScreenState extends State<SeriesScreen>
                     _searchCtrl.clear();
                     setState(() => _search = "");
                   },
-                  onTvTap: () => setState(() => _kbOpen = !_kbOpen),
                   onChanged: (v) => setState(() => _search = v),
                 ),
               ),
             ],
           ),
         ),
-        // Teclado virtual embutido na TV (campo + teclado sempre visiveis).
-        if (cfg.isTv && _kbOpen)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: VirtualKeyboard(
-              controller: _searchCtrl,
-              onSubmit: () => setState(() => _kbOpen = false),
-              onClose: () => setState(() => _kbOpen = false),
-            ),
-          ),
         Expanded(
           child: Row(
             children: [
-              // Sidebar de categorias (glass) — apenas se houver grupos
               if (_groups.isNotEmpty)
                 Container(
                   width: cfg.sideMenuWidth,
@@ -159,8 +141,7 @@ class _SeriesScreenState extends State<SeriesScreen>
                             boxShadow: sel
                                 ? [
                                     BoxShadow(
-                                      color: AppTheme.accent
-                                          .withOpacity(0.3),
+                                      color: AppTheme.accent.withOpacity(0.3),
                                       blurRadius: 12,
                                       offset: const Offset(0, 2),
                                     )
@@ -183,7 +164,6 @@ class _SeriesScreenState extends State<SeriesScreen>
                     },
                   ),
                 ),
-              // Grade de pôsteres GRANDES (4 colunas, proporção 2:3)
               Expanded(
                 child: series.isEmpty
                     ? const Center(
@@ -270,8 +250,13 @@ class _SeriesScreenState extends State<SeriesScreen>
   }
 }
 
-/// Detalhe da série: abas de temporada + episódios numerados em ordem crescente.
-/// Séries Xtream carregam episódios sob demanda via fetchSeriesInfo.
+// ============================================================================
+//  Detalhe da série — estilo Google TV:
+//   - Fundo: pôster da série desfocado em tela cheia.
+//   - Topo: pôster à esquerda + nome/info à direita.
+//   - Chips de temporada (roláveis horizontalmente).
+//   - Episódios em lista organizada (número, nome, duração, play).
+// ============================================================================
 class SeriesDetailScreen extends StatefulWidget {
   final SeriesGroup series;
   const SeriesDetailScreen({super.key, required this.series});
@@ -284,7 +269,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   late Map<int, List<MediaItem>> _seasons;
   late int _selectedSeason;
   bool _loadingEpisodes = false;
-  String? _error; // mensagem de erro visível com botão de retry
+  String? _error;
 
   @override
   void initState() {
@@ -335,245 +320,335 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = DeviceConfig.of(context).isPhone;
     final seasonNums = _seasons.keys.toList()..sort();
     final episodes = (_seasons[_selectedSeason] ?? [])
       ..sort((a, b) => (a.episode ?? 0).compareTo(b.episode ?? 0));
+    final posterUrl = widget.series.logo;
+    final hasPoster = posterUrl != null && posterUrl.isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF12202E), AppTheme.background],
-            stops: [0.0, 0.4],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Fundo desfocado (estilo Google TV)
+          if (hasPoster)
+            FastImage(
+              url: posterUrl,
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            )
+          else
+            const DecoratedBox(
+                decoration: BoxDecoration(gradient: AppTheme.ambientGradient)),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(color: Colors.black.withOpacity(0.6)),
           ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.overscan / 2),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                TVFocusableItem(
-                  autofocus: true,
-                  borderRadius: 20,
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.glassBorder),
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.all(DeviceConfig.of(context).overscan / 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Barra superior: voltar + título
+                  Row(children: [
+                    TVFocusableItem(
+                      autofocus: true,
+                      borderRadius: 20,
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppTheme.glassBorder),
+                        ),
+                        child: const Icon(Icons.arrow_back,
+                            color: AppTheme.textPrimary),
+                      ),
                     ),
-                    child: const Icon(Icons.arrow_back,
-                        color: AppTheme.textPrimary),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(widget.series.name,
-                      style: AppTheme.titleH1,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ),
-                if (widget.series.logo != null &&
-                    widget.series.logo!.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: FastImage(
-                        url: widget.series.logo!,
-                        width: 56,
-                        height: 80,
-                        fit: BoxFit.cover),
-                  ),
-              ]),
-              const SizedBox(height: 18),
-              if (seasonNums.isNotEmpty)
-                SizedBox(
-                  height: 48,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: seasonNums.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (_, i) {
-                      final s = seasonNums[i];
-                      final sel = s == _selectedSeason;
-                      final epCount = (_seasons[s] ?? []).length;
-                      return TVFocusableItem(
-                        borderRadius: 22,
-                        onTap: () => setState(() => _selectedSeason = s),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 22, vertical: 12),
-                          decoration: BoxDecoration(
-                            gradient: sel ? AppTheme.accentGradient : null,
-                            color: sel ? null : AppTheme.surface,
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(
-                                color: sel
-                                    ? Colors.transparent
-                                    : AppTheme.glassBorder),
-                            boxShadow: sel
-                                ? [
-                                    BoxShadow(
-                                      color: AppTheme.accent
-                                          .withOpacity(0.35),
-                                      blurRadius: 14,
-                                      offset: const Offset(0, 3),
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: Text("T$s • $epCount ep",
-                              style: TextStyle(
-                                  color: sel
-                                      ? Colors.black
-                                      : AppTheme.textPrimary,
-                                  fontWeight:
-                                      sel ? FontWeight.w900 : FontWeight.w600,
-                                  fontSize: 14)),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              const SizedBox(height: 18),
-              if (_loadingEpisodes)
-                const Expanded(
-                    child: Center(
-                        child: CircularProgressIndicator(
-                            color: AppTheme.accent)))
-              else if (_error != null && _seasons.isEmpty)
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(widget.series.name,
+                          style: AppTheme.titleH1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.accent.withOpacity(0.4)),
+                      ),
+                      child: Text(
+                          "${seasonNums.length} temp. • ${widget.series.episodeCount} ep.",
+                          style: const TextStyle(
+                              color: AppTheme.accent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ]),
+                  const SizedBox(height: 18),
+                  // Cabeçalho: pôster + info (apenas TV)
+                  if (!isPhone)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.error_outline_rounded,
-                            color: AppTheme.textMuted, size: 48),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          width: 320,
-                          child: Text(_error!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 14,
-                                  height: 1.4)),
-                        ),
-                        const SizedBox(height: 18),
-                        TVFocusableItem(
-                          borderRadius: AppTheme.radiusMd,
-                          onTap: _loadXtreamEpisodes,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: AppTheme.accentGradient,
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.radiusMd),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.refresh_rounded,
-                                    color: Colors.black, size: 18),
-                                SizedBox(width: 8),
-                                Text("Tentar novamente",
-                                    style: TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 14)),
-                              ],
-                            ),
+                        if (hasPoster)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: FastImage(
+                                url: posterUrl,
+                                width: 130,
+                                height: 195,
+                                fit: BoxFit.cover),
+                          ),
+                        if (hasPoster) const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (widget.series.group.isNotEmpty)
+                                Text(widget.series.group,
+                                    style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Selecione uma temporada abaixo para ver os episódios. Navegue com o controle remoto e pressione OK para reproduzir.",
+                                style: TextStyle(
+                                    color: AppTheme.textSecondary
+                                        .withOpacity(0.8),
+                                    fontSize: 13,
+                                    height: 1.4),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                )
-              else if (episodes.isEmpty)
-                const Expanded(
-                    child: Center(
-                        child: Text("Nenhum episódio encontrado.",
-                            style:
-                                TextStyle(color: AppTheme.textSecondary))))
-              else
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: episodes.length,
-                    separatorBuilder: (_, __) =>
-                        const Divider(color: Colors.white10, height: 1),
-                    itemBuilder: (_, i) {
-                      final ep = episodes[i];
-                      final num = ep.episode ?? (i + 1);
-                      return TVFocusableItem(
-                        borderRadius: AppTheme.radiusMd,
-                        focusScale: 1.01,
-                        onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => PlayerScreen(item: ep))),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 14),
-                          child: Row(children: [
-                            Container(
-                              width: 52,
-                              height: 52,
+                  if (!isPhone) const SizedBox(height: 18),
+                  // Chips de temporada
+                  if (seasonNums.isNotEmpty)
+                    SizedBox(
+                      height: 48,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: seasonNums.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (_, i) {
+                          final s = seasonNums[i];
+                          final sel = s == _selectedSeason;
+                          final epCount = (_seasons[s] ?? []).length;
+                          return TVFocusableItem(
+                            borderRadius: 22,
+                            onTap: () => setState(() => _selectedSeason = s),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 12),
                               decoration: BoxDecoration(
-                                gradient: AppTheme.accentGradient,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppTheme.accent
-                                        .withOpacity(0.3),
-                                    blurRadius: 10,
+                                gradient:
+                                    sel ? AppTheme.accentGradient : null,
+                                color: sel ? null : Colors.white.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                    color: sel
+                                        ? Colors.transparent
+                                        : AppTheme.glassBorder),
+                                boxShadow: sel
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.accent
+                                              .withOpacity(0.35),
+                                          blurRadius: 14,
+                                          offset: const Offset(0, 3),
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text("Temporada $s",
+                                      style: TextStyle(
+                                          color: sel
+                                              ? Colors.black
+                                              : AppTheme.textPrimary,
+                                          fontWeight: sel
+                                              ? FontWeight.w900
+                                              : FontWeight.w700,
+                                          fontSize: 14)),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: sel
+                                          ? Colors.black.withOpacity(0.2)
+                                          : Colors.white.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text("$epCount",
+                                        style: TextStyle(
+                                            color: sel
+                                                ? Colors.black
+                                                : AppTheme.textSecondary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700)),
                                   ),
                                 ],
                               ),
-                              alignment: Alignment.center,
-                              child: Text("$num",
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.black,
-                                      fontSize: 18)),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(ep.name,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 15)),
-                                    const SizedBox(height: 4),
-                                    if (ep.durationSec != null &&
-                                        ep.durationSec! > 0)
-                                      Text(
-                                          "${(ep.durationSec! ~/ 60)} min",
-                                          style: const TextStyle(
-                                              color: AppTheme.textSecondary,
-                                              fontSize: 12)),
-                                  ]),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  // Estado de carregamento / erro
+                  if (_loadingEpisodes)
+                    const Expanded(
+                        child: Center(
+                            child: CircularProgressIndicator(
+                                color: AppTheme.accent)))
+                  else if (_error != null)
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_error!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    color: AppTheme.textSecondary)),
+                            const SizedBox(height: 16),
+                            TVFocusableItem(
+                              borderRadius: AppTheme.radiusMd,
+                              onTap: _loadXtreamEpisodes,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                                decoration: BoxDecoration(
+                                  gradient: AppTheme.accentGradient,
+                                  borderRadius:
+                                      BorderRadius.circular(AppTheme.radiusMd),
+                                ),
+                                child: const Text("Tentar novamente",
+                                    style: TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w800)),
+                              ),
                             ),
-                            const Icon(Icons.play_circle_fill_rounded,
-                                color: AppTheme.accent, size: 30),
-                          ]),
+                          ],
                         ),
-                      );
-                    },
-                  ),
-                ),
-            ]),
+                      ),
+                    )
+                  else if (episodes.isEmpty)
+                    const Expanded(
+                        child: Center(
+                            child: Text("Nenhum episódio encontrado.",
+                                style: TextStyle(
+                                    color: AppTheme.textSecondary))))
+                  else
+                    // Lista de episódios organizada
+                    Expanded(
+                      child: GridView.builder(
+                        gridDelegate:
+                            SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: isPhone ? 400 : 520,
+                          mainAxisExtent: isPhone ? 90 : 84,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: episodes.length,
+                        itemBuilder: (_, i) {
+                          final ep = episodes[i];
+                          final num = ep.episode ?? (i + 1);
+                          return TVFocusableItem(
+                            borderRadius: AppTheme.radiusMd,
+                            focusScale: 1.01,
+                            onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        PlayerScreen(item: ep))),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.06),
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.radiusMd),
+                                border: Border.all(color: Colors.white10),
+                              ),
+                              child: Row(children: [
+                                Container(
+                                  width: 46,
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.accentGradient,
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: [
+                                      BoxShadow(
+                                          color: AppTheme.accent
+                                              .withOpacity(0.3),
+                                          blurRadius: 8),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text("$num",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.black,
+                                          fontSize: 17)),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                            "E$num · ${ep.name}",
+                                            maxLines: 2,
+                                            overflow:
+                                                TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                                height: 1.2)),
+                                        const SizedBox(height: 4),
+                                        if (ep.durationSec != null &&
+                                            ep.durationSec! > 0)
+                                          Text(
+                                              "${(ep.durationSec! ~/ 60)} min",
+                                              style: const TextStyle(
+                                                  color: AppTheme
+                                                      .textSecondary,
+                                                  fontSize: 12)),
+                                      ]),
+                                ),
+                                const Icon(
+                                    Icons.play_circle_fill_rounded,
+                                    color: AppTheme.accent,
+                                    size: 28),
+                              ]),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

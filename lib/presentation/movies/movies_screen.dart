@@ -30,7 +30,6 @@ class _MoviesScreenState extends State<MoviesScreen>
   List<MediaItem> _allMovies = []; // cache em memória
   bool _loading = true;
   String _search = "";
-  bool _kbOpen = false; // teclado virtual embutido (apenas TV)
 
   static final _yearReg = RegExp(r"\((\d{4})\)");
 
@@ -111,25 +110,12 @@ class _MoviesScreenState extends State<MoviesScreen>
                     _searchCtrl.clear();
                     setState(() => _search = "");
                   },
-                  onTvTap: () => setState(() => _kbOpen = !_kbOpen),
                   onChanged: (v) => setState(() => _search = v),
                 ),
               ),
             ],
           ),
         ),
-        // Teclado virtual embutido na TV: campo (no header) + teclado ficam
-        // sempre visíveis, sem sobrepor a lista (a lista encolhe). No celular
-        // não aparece (usa teclado nativo).
-        if (cfg.isTv && _kbOpen)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: VirtualKeyboard(
-              controller: _searchCtrl,
-              onSubmit: () => setState(() => _kbOpen = false),
-              onClose: () => setState(() => _kbOpen = false),
-            ),
-          ),
         Expanded(
           child: Row(
             children: [

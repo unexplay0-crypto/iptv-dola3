@@ -32,7 +32,6 @@ class _LiveTvScreenState extends State<LiveTvScreen>
   List<MediaItem> _allChannels = []; // cache em memória (todos os canais)
   bool _loading = true;
   String _search = "";
-  bool _kbOpen = false; // teclado virtual embutido (apenas TV)
 
   @override
   bool get wantKeepAlive => true;
@@ -126,23 +125,12 @@ class _LiveTvScreenState extends State<LiveTvScreen>
                     _searchCtrl.clear();
                     setState(() => _search = "");
                   },
-                  onTvTap: () => setState(() => _kbOpen = !_kbOpen),
                   onChanged: (v) => setState(() => _search = v),
                 ),
               ),
             ],
           ),
         ),
-        // Teclado virtual embutido na TV (campo + teclado sempre visiveis).
-        if (cfg.isTv && _kbOpen)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: VirtualKeyboard(
-              controller: _searchCtrl,
-              onSubmit: () => setState(() => _kbOpen = false),
-              onClose: () => setState(() => _kbOpen = false),
-            ),
-          ),
         Expanded(
           child: Row(
             children: [
