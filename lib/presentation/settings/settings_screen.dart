@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
-import '../../core/device_config.dart';
 import '../../core/storage.dart';
 import '../../db/database.dart';
 import '../../widgets/tv_focusable_item.dart';
@@ -32,61 +31,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<String?> _askNewPin() async {
-    final isTv = DeviceConfig.of(context).isTv;
-    if (isTv) {
-      // Na TV: usa o teclado do app (estilo Fire TV) — nunca o IME da TV.
-      final result = await TvKeyboardDialog.show(
-        context,
-        label: "Novo PIN (4 dígitos)",
-        hint: "0000",
-        obscureText: true,
-        keyboardType: TextInputType.number,
-      );
-      if (result == null) return null;
-      final pin = result.trim();
-      if (pin.length != 4 || int.tryParse(pin) == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content:
-                  Text("O PIN deve ter exatamente 4 dígitos numéricos.")));
-        }
-        return null;
-      }
-      return pin;
-    }
-    // Celular: diálogo nativo com TextField (teclado do sistema).
-    final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text("Novo PIN (4 dígitos)"),
-        content: TextField(
-            controller: ctrl,
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            obscureText: true,
-            decoration: const InputDecoration(hintText: "0000")),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar")),
-          TextButton(
-              onPressed: () {
-                final pin = ctrl.text.trim();
-                if (pin.length != 4 || int.tryParse(pin) == null) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text(
-                          "O PIN deve ter exatamente 4 dígitos numéricos.")));
-                  return;
-                }
-                Navigator.pop(context, pin);
-              },
-              child: const Text("Salvar")),
-        ],
-      ),
+    // REGRA ABSOLUTA: em QUALQUER dispositivo (TV ou celular), nunca abre o
+    // teclado nativo — sempre usa o teclado virtual do próprio app.
+    final result = await TvKeyboardDialog.show(
+      context,
+      label: "Novo PIN (4 dígitos)",
+      hint: "0000",
+      obscureText: true,
+      keyboardType: TextInputType.number,
     );
+    if (result == null) return null;
+    final pin = result.trim();
+    if (pin.length != 4 || int.tryParse(pin) == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("O PIN deve ter exatamente 4 dígitos numéricos.")));
+      }
+      return null;
+    }
+    return pin;
   }
 
   void _logout() async {

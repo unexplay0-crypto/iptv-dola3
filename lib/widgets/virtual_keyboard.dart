@@ -689,56 +689,17 @@ class AdaptiveInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTv = DeviceConfig.of(context).isTv;
-    if (isTv) {
-      return GlassInputField(
-        controller: controller,
-        label: label,
-        hint: hint,
-        obscureText: obscureText,
-        active: active,
-        onSelect: () => _openKeyboard(context),
-        maxLines: maxLines,
-      );
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      decoration: BoxDecoration(
-        color: active
-            ? Colors.white.withOpacity(0.14)
-            : Colors.white.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-        border: Border.all(
-            color: active ? AppTheme.accent : AppTheme.glassBorder,
-            width: active ? 1.5 : 1),
-        boxShadow: active
-            ? [
-                BoxShadow(
-                    color: AppTheme.accent.withOpacity(0.25), blurRadius: 12)
-              ]
-            : null,
-      ),
-      child: TextField(
-        controller: controller,
-        autofocus: active,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        onChanged: onChanged,
-        style: const TextStyle(
-            color: AppTheme.textPrimary, fontSize: 15, height: 1.4),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(
-              color: active ? AppTheme.accent : AppTheme.textSecondary,
-              fontSize: 13),
-          hintText: hint,
-          hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-      ),
+    // REGRA ABSOLUTA: em TODOS os dispositivos (TV OU celular), o teclado
+    // nativo do sistema NUNCA abre. Este campo é sempre readOnly e toque
+    // abre a janela de teclado do próprio app (estilo Fire TV).
+    return GlassInputField(
+      controller: controller,
+      label: label,
+      hint: hint,
+      obscureText: obscureText,
+      active: active,
+      onSelect: () => _openKeyboard(context),
+      maxLines: maxLines,
     );
   }
 }
@@ -774,12 +735,13 @@ class AdaptiveSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTv = DeviceConfig.of(context).isTv;
+    // REGRA ABSOLUTA: readOnly em TODOS os dispositivos — teclado nativo
+    // nunca abre. Toque sempre abre a janela de teclado do app.
     return TextField(
       controller: controller,
-      readOnly: isTv,
-      showCursor: isTv,
-      onTap: isTv ? () => _openKeyboard(context) : null,
+      readOnly: true,
+      showCursor: true,
+      onTap: () => _openKeyboard(context),
       onChanged: onChanged,
       style: const TextStyle(
           color: AppTheme.textPrimary, fontSize: 14, height: 1.3),
@@ -793,10 +755,8 @@ class AdaptiveSearchField extends StatelessWidget {
                 icon: const Icon(Icons.clear, color: AppTheme.textMuted, size: 18),
                 onPressed: onClear,
               )
-            : (isTv
-                ? const Icon(Icons.keyboard_rounded,
-                    color: AppTheme.accent, size: 18)
-                : null),
+            : const Icon(Icons.keyboard_rounded,
+                color: AppTheme.accent, size: 18),
         filled: true,
         fillColor: AppTheme.surface.withOpacity(0.8),
         contentPadding:
