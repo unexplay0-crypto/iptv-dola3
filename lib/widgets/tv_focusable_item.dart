@@ -62,8 +62,9 @@ class _TVFocusableItemState extends State<TVFocusableItem> {
       autofocus: widget.autofocus,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent &&
-            (event.logicalKey.keyLabel == "Select" ||
-                event.logicalKey.keyLabel == "Enter")) {
+            (event.logicalKey == LogicalKeyboardKey.select ||
+                event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.space)) {
           if (widget.onTap != null) widget.onTap!();
           return KeyEventResult.handled;
         }
@@ -83,7 +84,17 @@ class _TVFocusableItemState extends State<TVFocusableItem> {
               color: _focused ? widget.focusColor : Colors.transparent,
               width: _focused ? 3 : 0,
             ),
-            boxShadow: _focused ? AppTheme.focusGlow(widget.focusColor) : null,
+            boxShadow: _focused
+                ? [
+                    // Sombra preta de elevação (profundidade) + glow colorido.
+                    const BoxShadow(
+                      color: Color(0x66000000),
+                      blurRadius: 28,
+                      offset: Offset(0, 10),
+                    ),
+                    ...AppTheme.focusGlow(widget.focusColor),
+                  ]
+                : null,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(widget.borderRadius),

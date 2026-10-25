@@ -184,17 +184,17 @@ class AppTheme {
     color: textPrimary,
     letterSpacing: -0.1,
   );
-  static const TextStyle body = TextStyle(fontSize: 14, color: textPrimary);
+  static const TextStyle body = TextStyle(fontSize: 15, color: textPrimary);
   static const TextStyle caption =
-      TextStyle(fontSize: 12, color: textSecondary);
+      TextStyle(fontSize: 13, color: textSecondary);
   static const TextStyle channelName = TextStyle(
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: FontWeight.w700,
     color: textPrimary,
     height: 1.2,
   );
   static const TextStyle channelMeta = TextStyle(
-    fontSize: 12,
+    fontSize: 13,
     color: textSecondary,
   );
   static const TextStyle posterTitle = TextStyle(
@@ -415,8 +415,8 @@ class GlassContainer extends StatelessWidget {
   }
 }
 
-/// Transição de página fluida: fade + leve deslize vertical (de 6% para 0),
-/// curva easeOutCubic, ~280ms. Mais suave que o zoom padrão do Material.
+/// Transição de página fluida: fade + escala (0.97→1.0) + leve deslize
+/// vertical, curva easeOutCubic, ~280ms. Estilo Google TV / visionOS.
 class _FluentPageTransitionsBuilder extends PageTransitionsBuilder {
   const _FluentPageTransitionsBuilder();
   @override
@@ -434,12 +434,15 @@ class _FluentPageTransitionsBuilder extends PageTransitionsBuilder {
     );
     return FadeTransition(
       opacity: curved,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.05),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.97, end: 1.0).animate(curved),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.04),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
       ),
     );
   }
