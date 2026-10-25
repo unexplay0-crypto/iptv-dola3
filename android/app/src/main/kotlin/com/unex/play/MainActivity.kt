@@ -2,12 +2,27 @@ package com.unex.play
 
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Bundle
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val channel = "com.unex.play/device"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Proteção EXTRA: na TV (Android TV / Google TV / Fire TV), o IME do
+        // sistema (teclado nativo da TV) é bloqueado a nível de Activity —
+        // o app usa SEMPRE seu próprio teclado virtual. No celular o
+        // comportamento permanece normal (teclado do sistema).
+        if (isTv()) {
+            window.setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
+            )
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
